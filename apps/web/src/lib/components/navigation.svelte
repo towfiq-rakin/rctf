@@ -249,7 +249,7 @@
     justify-content: space-between;
     block-size: var(--header-height);
     padding: 0.75rem 1rem;
-    background: var(--background-l0);
+    background: transparent;
 
     @media (width >= 48rem) {
       padding-inline: 2.25rem;

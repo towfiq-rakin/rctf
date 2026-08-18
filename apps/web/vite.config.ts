@@ -6,6 +6,9 @@ const DEV_API_URL = 'http://127.0.0.1:3000'
 
 export default defineConfig({
   plugins: [sveltekit()],
+  optimizeDeps: {
+    include: ['svelte', 'svelte/store'],
+  },
   server: {
     proxy: {
       '/api': {

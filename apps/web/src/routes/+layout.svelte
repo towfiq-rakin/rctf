@@ -14,6 +14,7 @@
   import Brainrot from '$lib/components/brainrot.svelte'
   import Navigation from '$lib/components/navigation.svelte'
   import RootEdgeFades from '$lib/components/root-edge-fades.svelte'
+  import Topography from '$lib/components/topography.svelte'
   import { resetSessionQueries } from '$lib/query/core'
   import ToastHost from '$lib/ui/toast-host.svelte'
   import { initAnalytics } from '$lib/utils/analytics'
@@ -82,6 +83,32 @@
 
 <QueryClientProvider client={data.queryClient}>
   <app-shell>
+    <topography-backdrop aria-hidden="true">
+      <Topography
+        lowColor="#c90000"
+        midColor="#F43F5E"
+        highColor="#ff9e9e"
+        speed={0.35}
+        morphAmount={3.0}
+        morphSpeed={0.01}
+        bands={2.0}
+        thickness={0.01}
+        scale={2.0}
+        pixelSize={1.0}
+        glow={0.5}
+        colorMode="elevation"
+        contrast={3.0}
+        brightness={1.0}
+        fillBands={false}
+        opacity={1.0}
+        grain={true}
+        grainIntensity={0.05}
+        mouseInteraction={false}
+        mouseRadius={0.3}
+        mouseStrength={0.4}
+      />
+    </topography-backdrop>
+
     <a class="skip-link" href="#main-content">Skip to main content</a>
     <Navigation />
 
@@ -105,7 +132,16 @@
     padding-block-start: var(--header-height);
   }
 
+  topography-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
   main {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     flex: 1;

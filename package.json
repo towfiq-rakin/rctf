@@ -19,7 +19,7 @@
     "yaml": "2.9.0"
   },
   "scripts": {
-    "dev": "bun --ellide-lines=0 run --filter '@rctf/api' --filter '@rctf/web' dev",
+    "dev": "bun --elide-lines=0 run --filter '@rctf/api' --filter '@rctf/web' dev",
     "dev:api": "bun run --filter '@rctf/api' dev",
     "dev:web": "bun run --filter '@rctf/web' dev",
     "dev:docs": "bun run --filter '@rctf/docs' dev",

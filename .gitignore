@@ -30,6 +30,7 @@ vite.config.ts.timestamp-*
 .cursor/
 .codex/
 .claude/
+.commandcode/
 .zed/
 AGENTS.md
 CLAUDE.md
