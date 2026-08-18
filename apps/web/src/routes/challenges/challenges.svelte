@@ -255,7 +255,11 @@
     flex-direction: column;
     block-size: 100%;
     overflow: hidden;
-    background: var(--background-l1);
+    background: color-mix(in srgb, var(--background-l1) 65%, transparent);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid light-dark(rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.08));
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15);
 
     &[data-side='list'] {
       border-start-end-radius: var(--radius-3xl);
