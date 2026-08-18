@@ -70,7 +70,7 @@
     align-items: center;
     gap: var(--space-2xs);
     color: var(--foreground-l3);
-    font-size: var(--step--1);
+    font-size: var(--step-1);
   }
 
   timer-units {

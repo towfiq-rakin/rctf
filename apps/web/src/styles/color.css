@@ -489,9 +489,9 @@
   --foreground-l4: var(--gray-8);
   --foreground-l5: light-dark(var(--gray-8), var(--gray-7));
 
-  --background-accent:            var(--sky-4);
-  --background-accent-hover:      var(--sky-5);
-  --foreground-accent:            var(--sky-11);
+  --background-accent:            var(--red-4);
+  --background-accent-hover:      var(--red-5);
+  --foreground-accent:            var(--red-11);
   --background-destructive:       var(--red-4);
   --background-destructive-hover: var(--red-5);
   --foreground-destructive:       var(--red-11);

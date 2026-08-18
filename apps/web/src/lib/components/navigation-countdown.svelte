@@ -56,8 +56,12 @@
     block-size: 3rem;
     min-inline-size: 8rem;
     padding-inline: var(--space-s);
-    background: var(--background-l2);
+    background: color-mix(in srgb, var(--background-l2) 65%, transparent);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid light-dark(rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.08));
     border-radius: var(--radius-lg);
+    box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.12);
 
     @media (width < 64rem) {
       display: none;

@@ -1,16 +1,28 @@
 <script lang="ts">
   import Markdown from '$lib/components/markdown.svelte'
+  import ParticleText from '$lib/components/particletext.svelte';
   import Card from '$lib/ui/card.svelte'
   import type { PageProps } from './$types'
 
   const { data }: PageProps = $props()
 </script>
 
+<ParticleText 
+  text="BUP CSE Fest 2026 CTF" 
+  color="#ff0000"
+  fontSize="clamp(2rem, 10vw, 6rem)"
+  fontWeight={600}
+  pointerRepel={20}
+  particleSize={2}
+/>
 <home-page>
   <Card>
     <Markdown content={data.clientConfig.homeContent} />
   </Card>
+  <!-- <Markdown content={data.clientConfig.homeContent} /> -->
 
+  <!-- <h1> Hello World</h1> -->
+  
   {#if data.clientConfig.sponsors.length > 0}
     <Card title="Sponsors">
       <sponsor-grid>
