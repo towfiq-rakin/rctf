@@ -1,7 +1,7 @@
 services:
   redis:
     image: redis:8.2.2
-    restart: always
+    restart: unless-stopped
     command: ['redis-server', '--requirepass', 'DO_NOT_USE_ME']
     ports:
       - '127.0.0.1:6379:6379'
