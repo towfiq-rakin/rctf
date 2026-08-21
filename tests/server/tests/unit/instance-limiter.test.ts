@@ -2,30 +2,40 @@ import { describe, expect, test } from 'bun:test'
 import RedisMock from 'ioredis-mock'
 import { InstanceStatus } from '@rctf/types'
 import {
-  canTeamStartInstance,
   recordInstanceExtended,
   recordInstanceStarted,
   recordInstanceStopped,
+  reserveInstanceSlot,
   syncInstanceStatus,
   teamInstancesKey,
 } from '../../../../apps/api/src/cache/instance-limiter'
-import type { TypedRedis } from '../../../../apps/api/src/cache/scripts'
+import {
+  loadLuaCommands,
+  type TypedRedis,
+} from '../../../../apps/api/src/cache/scripts'
+
+const redisPromise = loadLuaCommands(new RedisMock())
+const createRedis = async (): Promise<TypedRedis> => {
+  const redis = await redisPromise
+  await redis.flushdb()
+  return redis
+}
 
 describe('instance-limiter', () => {
-  test('allows starting instances when maxInstances is not set or 0', async () => {
-    const redis = new RedisMock() as unknown as TypedRedis
-    const mockDb = {} as any
+  test('atomically admits only one concurrent reservation', async () => {
+    const redis = await createRedis()
 
-    expect(
-      await canTeamStartInstance(redis, mockDb, 'team-1', 'chall-1', undefined)
-    ).toBe(true)
-    expect(
-      await canTeamStartInstance(redis, mockDb, 'team-1', 'chall-1', 0)
-    ).toBe(true)
+    const results = await Promise.all([
+      reserveInstanceSlot(redis, 'team-race', 'chall-1', 1, 60000),
+      reserveInstanceSlot(redis, 'team-race', 'chall-2', 1, 60000),
+    ])
+
+    expect(results.sort()).toEqual(['limit', 'reserved'])
+    expect(await redis.zcard(teamInstancesKey('team-race'))).toBe(1)
   })
 
   test('records started, extended, stopped instances in Redis ZSET', async () => {
-    const redis = new RedisMock() as unknown as TypedRedis
+    const redis = await createRedis()
     const teamId = 'team-test-1'
     const key = teamInstancesKey(teamId)
 
@@ -33,12 +43,13 @@ describe('instance-limiter', () => {
     await recordInstanceStarted(redis, teamId, 'chall-1', 60000)
     let score = await redis.zscore(key, 'chall-1')
     expect(score).not.toBeNull()
-    expect(Number(score)).toBeGreaterThan(Date.now())
+    expect(Number(score)).toBeGreaterThan(Date.now() / 1000)
 
     // Record instance extend
     await recordInstanceExtended(redis, teamId, 'chall-1', 120000)
     const newScore = await redis.zscore(key, 'chall-1')
     expect(Number(newScore)).toBeGreaterThan(Number(score))
+    expect(await redis.ttl(key)).toBe(-1)
 
     // Record instance stop
     await recordInstanceStopped(redis, teamId, 'chall-1')
@@ -47,65 +58,61 @@ describe('instance-limiter', () => {
   })
 
   test('enforces maxInstances limit properly', async () => {
-    const redis = new RedisMock() as unknown as TypedRedis
-    const mockDb = {} as any
+    const redis = await createRedis()
     const teamId = 'team-limit-1'
 
     // Limit is 2
     const maxInstances = 2
 
     expect(
-      await canTeamStartInstance(redis, mockDb, teamId, 'chall-1', maxInstances)
-    ).toBe(true)
-    await recordInstanceStarted(redis, teamId, 'chall-1', 60000)
+      await reserveInstanceSlot(redis, teamId, 'chall-1', maxInstances, 60000)
+    ).toBe('reserved')
 
     expect(
-      await canTeamStartInstance(redis, mockDb, teamId, 'chall-2', maxInstances)
-    ).toBe(true)
-    await recordInstanceStarted(redis, teamId, 'chall-2', 60000)
+      await reserveInstanceSlot(redis, teamId, 'chall-2', maxInstances, 60000)
+    ).toBe('reserved')
 
     // Attempting 3rd challenge should be blocked
     expect(
-      await canTeamStartInstance(redis, mockDb, teamId, 'chall-3', maxInstances)
-    ).toBe(false)
+      await reserveInstanceSlot(redis, teamId, 'chall-3', maxInstances, 60000)
+    ).toBe('limit')
 
     // Attempting already active challenge should be allowed
     expect(
-      await canTeamStartInstance(redis, mockDb, teamId, 'chall-1', maxInstances)
-    ).toBe(true)
+      await reserveInstanceSlot(redis, teamId, 'chall-1', maxInstances, 60000)
+    ).toBe('existing')
 
     // Stop chall-1
     await recordInstanceStopped(redis, teamId, 'chall-1')
 
     // Now chall-3 should be allowed
     expect(
-      await canTeamStartInstance(redis, mockDb, teamId, 'chall-3', maxInstances)
-    ).toBe(true)
+      await reserveInstanceSlot(redis, teamId, 'chall-3', maxInstances, 60000)
+    ).toBe('reserved')
   })
 
-  test('prunes expired instances when checking limit', async () => {
-    const redis = new RedisMock() as unknown as TypedRedis
-    const mockDb = {} as any
+  test('keeps expired leases until provider reconciliation', async () => {
+    const redis = await createRedis()
     const teamId = 'team-expired-1'
     const key = teamInstancesKey(teamId)
 
     // Add an expired instance (timestamp in past)
-    await redis.zadd(key, Date.now() - 5000, 'chall-old')
+    await redis.zadd(key, Date.now() / 1000 - 5, 'chall-old')
     await recordInstanceStarted(redis, teamId, 'chall-active', 60000)
 
-    // Max instances = 2
-    // With 1 expired and 1 active, can start a new one
+    // Expiration is only a hint. Admission fails closed until the provider
+    // confirms that the old instance is terminal.
     expect(
-      await canTeamStartInstance(redis, mockDb, teamId, 'chall-new', 2)
-    ).toBe(true)
+      await reserveInstanceSlot(redis, teamId, 'chall-new', 2, 60000)
+    ).toBe('limit')
 
-    // The expired one should have been removed
+    // The expired one remains available for provider reconciliation.
     const oldScore = await redis.zscore(key, 'chall-old')
-    expect(oldScore).toBeNull()
+    expect(oldScore).not.toBeNull()
   })
 
   test('syncInstanceStatus updates Redis on stopped or running', async () => {
-    const redis = new RedisMock() as unknown as TypedRedis
+    const redis = await createRedis()
     const teamId = 'team-sync-1'
     const key = teamInstancesKey(teamId)
 
@@ -128,5 +135,46 @@ describe('instance-limiter', () => {
 
     score = await redis.zscore(key, 'chall-1')
     expect(score).toBeNull()
+  })
+
+  test('counts starting instances that report zero time left', async () => {
+    const redis = await createRedis()
+    const teamId = 'team-starting'
+
+    await syncInstanceStatus(
+      redis,
+      teamId,
+      'chall-1',
+      {
+        kind: 'instancerInstanceDetails',
+        status: InstanceStatus.STARTING,
+        timeLeftMilliseconds: 0,
+        endpoints: [],
+      },
+      120000
+    )
+
+    const score = await redis.zscore(teamInstancesKey(teamId), 'chall-1')
+    expect(Number(score)).toBeGreaterThan(Date.now() / 1000 + 60)
+    expect(await reserveInstanceSlot(redis, teamId, 'chall-2', 1, 60000)).toBe(
+      'limit'
+    )
+  })
+
+  test('preserves an active lease on provider errors', async () => {
+    const redis = await createRedis()
+    const teamId = 'team-provider-error'
+
+    await recordInstanceStarted(redis, teamId, 'chall-1', 60000)
+    expect(
+      await syncInstanceStatus(redis, teamId, 'chall-1', {
+        kind: 'instancerError',
+        message: 'temporary provider failure',
+      })
+    ).toBe('unavailable')
+
+    expect(
+      await redis.zscore(teamInstancesKey(teamId), 'chall-1')
+    ).not.toBeNull()
   })
 })

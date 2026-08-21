@@ -137,7 +137,7 @@ export const loadEnvConfig = (): ConfigLayer => {
     ['endTime', getEnvInteger('RCTF_END_TIME')],
     ['leaderboard', leaderboard],
     ['loginTimeout', getEnvInteger('RCTF_LOGIN_TIMEOUT')],
-    ['maxInstances', getEnvInteger('RCTF_MAX_INSTANCES') ?? getEnvInteger('RCTF_MAX_INSTANCE')],
+    ['maxInstances', getEnvInteger('RCTF_MAX_INSTANCES')],
     ['uploadProvider', uploadProvider],
   ]) || {}) as ConfigLayer
 }

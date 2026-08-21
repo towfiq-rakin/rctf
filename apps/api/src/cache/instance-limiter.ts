@@ -1,6 +1,9 @@
-import type { DatabaseClient } from '@rctf/db'
+import type { Challenge, DatabaseClient } from '@rctf/db'
 import type { instanceDetailsOrError } from '../providers/instancer/base'
-import { getChallenge } from '../services/challenges'
+import {
+  getPrivateChallenge,
+  getPrivateChallenges,
+} from '../services/challenges'
 import {
   getInstancerProvider,
   resolveInstancerName,
@@ -8,80 +11,66 @@ import {
 import { inferChallengeIntegrationId } from '../util/instancer'
 import type { TypedRedis } from './scripts'
 
+const MINIMUM_LEASE_MILLISECONDS = 60_000
+const RESERVATION_GRACE_MILLISECONDS = 60_000
+
+export type InstanceReservation =
+  | 'disabled'
+  | 'unavailable'
+  | 'limit'
+  | 'existing'
+  | 'reserved'
+
 export const teamInstancesKey = (teamId: string) =>
   `instancer:team_instances:${teamId}`
 
-export const canTeamStartInstance = async (
+export const teamInstancesInitializedKey = (teamId: string) =>
+  `instancer:team_instances_initialized:${teamId}`
+
+export const teamInstanceReservationsKey = (teamId: string) =>
+  `instancer:team_instance_reservations:${teamId}`
+
+const isActiveStatus = (status: instanceDetailsOrError): boolean =>
+  status.kind === 'instancerInstanceDetails' &&
+  (status.status === 'starting' ||
+    status.status === 'running' ||
+    status.status === 'stopping')
+
+const leaseMilliseconds = (
+  status: instanceDetailsOrError,
+  fallbackMilliseconds: number
+): number => {
+  if (
+    status.kind === 'instancerInstanceDetails' &&
+    status.timeLeftMilliseconds !== null &&
+    status.timeLeftMilliseconds > 0
+  ) {
+    return status.timeLeftMilliseconds
+  }
+
+  return Math.max(fallbackMilliseconds, MINIMUM_LEASE_MILLISECONDS)
+}
+
+export const reserveInstanceSlot = async (
   redis: TypedRedis,
-  db: DatabaseClient,
   teamId: string,
   challengeId: string,
-  maxInstances?: number
-): Promise<boolean> => {
-  if (!maxInstances || maxInstances <= 0) {
-    return true
+  maxInstances: number,
+  timeoutMilliseconds: number
+): Promise<'limit' | 'existing' | 'reserved'> => {
+  const result = await redis.rctfReserveInstance(
+    teamInstancesKey(teamId),
+    teamInstanceReservationsKey(teamId),
+    maxInstances.toString(),
+    challengeId,
+    Math.max(timeoutMilliseconds, MINIMUM_LEASE_MILLISECONDS).toString(),
+    RESERVATION_GRACE_MILLISECONDS.toString()
+  )
+
+  if (result === 0) {
+    return 'limit'
   }
-
-  const key = teamInstancesKey(teamId)
-  const now = Date.now()
-
-  // 1. Prune expired entries
-  await redis.zremrangebyscore(key, '-inf', now)
-
-  // 2. Check if this challenge is already active for the team
-  const score = await redis.zscore(key, challengeId)
-  if (score !== null && Number(score) > now) {
-    return true
-  }
-
-  // 3. Check active count
-  let count = await redis.zcard(key)
-  if (count < maxInstances) {
-    return true
-  }
-
-  // 4. Double check running status with provider for candidate challenges
-  if (db && typeof db.select === 'function') {
-    const activeChallIds = await redis.zrange(key, 0, -1)
-    for (const activeId of activeChallIds) {
-      try {
-        const chall = await getChallenge(db, activeId)
-        if (!chall?.data.instancerConfig) {
-          await redis.zrem(key, activeId)
-          count--
-          continue
-        }
-
-        const provider = getInstancerProvider(
-          resolveInstancerName(chall.data.instancerConfig)
-        )
-        if (!provider) {
-          await redis.zrem(key, activeId)
-          count--
-          continue
-        }
-
-        const status = await provider.getInstance({
-          teamId,
-          challengeIntegrationId: inferChallengeIntegrationId(chall),
-          config: chall.data.instancerConfig.config,
-        })
-
-        if (
-          status.kind !== 'instancerInstanceDetails' ||
-          status.status === 'stopped' ||
-          status.status === 'errored'
-        ) {
-          await redis.zrem(key, activeId)
-          count--
-        }
-      } catch {
-        // Keep on provider error to be safe
-      }
-    }
-  }
-
-  return count < maxInstances
+  return result === 1 ? 'existing' : 'reserved'
 }
 
 export const recordInstanceStarted = async (
@@ -90,12 +79,11 @@ export const recordInstanceStarted = async (
   challengeId: string,
   timeoutMilliseconds: number
 ): Promise<void> => {
-  const key = teamInstancesKey(teamId)
-  const expiresAt = Date.now() + timeoutMilliseconds
-  await redis.zadd(key, expiresAt, challengeId)
-  await redis.expire(
-    key,
-    Math.max(86400, Math.ceil((timeoutMilliseconds * 2) / 1000))
+  await redis.rctfUpdateInstance(
+    teamInstancesKey(teamId),
+    teamInstanceReservationsKey(teamId),
+    challengeId,
+    Math.max(timeoutMilliseconds, MINIMUM_LEASE_MILLISECONDS).toString()
   )
 }
 
@@ -104,43 +92,175 @@ export const recordInstanceStopped = async (
   teamId: string,
   challengeId: string
 ): Promise<void> => {
-  const key = teamInstancesKey(teamId)
-  await redis.zrem(key, challengeId)
+  await Promise.all([
+    redis.zrem(teamInstancesKey(teamId), challengeId),
+    redis.zrem(teamInstanceReservationsKey(teamId), challengeId),
+  ])
 }
 
-export const recordInstanceExtended = async (
-  redis: TypedRedis,
-  teamId: string,
-  challengeId: string,
-  timeLeftMilliseconds: number
-): Promise<void> => {
-  const key = teamInstancesKey(teamId)
-  const expiresAt = Date.now() + timeLeftMilliseconds
-  await redis.zadd(key, expiresAt, challengeId)
-}
+export const recordInstanceExtended = recordInstanceStarted
 
 export const syncInstanceStatus = async (
   redis: TypedRedis,
   teamId: string,
   challengeId: string,
-  status: instanceDetailsOrError
-): Promise<void> => {
-  if (
-    status.kind === 'instancerError' ||
-    (status.kind === 'instancerInstanceDetails' &&
-      (status.status === 'stopped' || status.status === 'errored'))
-  ) {
-    await recordInstanceStopped(redis, teamId, challengeId)
-  } else if (
-    status.kind === 'instancerInstanceDetails' &&
-    status.status === 'running' &&
-    status.timeLeftMilliseconds !== null
-  ) {
-    await recordInstanceExtended(
+  status: instanceDetailsOrError,
+  fallbackMilliseconds = MINIMUM_LEASE_MILLISECONDS
+): Promise<'active' | 'terminal' | 'unavailable'> => {
+  if (status.kind === 'instancerError') {
+    return 'unavailable'
+  }
+
+  if (isActiveStatus(status)) {
+    await recordInstanceStarted(
       redis,
       teamId,
       challengeId,
-      status.timeLeftMilliseconds
+      leaseMilliseconds(status, fallbackMilliseconds)
     )
+    return 'active'
   }
+
+  await recordInstanceStopped(redis, teamId, challengeId)
+  return 'terminal'
+}
+
+const reconcileChallenges = async (
+  redis: TypedRedis,
+  teamId: string,
+  challenges: Challenge[],
+  removeTerminal: boolean
+): Promise<boolean> => {
+  const results = await Promise.all(
+    challenges.map(async challenge => {
+      const instancerConfig = challenge.data.instancerConfig
+      if (!instancerConfig) {
+        return true
+      }
+
+      const provider = getInstancerProvider(
+        resolveInstancerName(instancerConfig)
+      )
+      if (!provider) {
+        return false
+      }
+
+      try {
+        const status = await provider.getInstance({
+          teamId,
+          challengeIntegrationId: inferChallengeIntegrationId(challenge),
+          config: instancerConfig.config,
+        })
+        if (status.kind === 'instancerError') {
+          return false
+        }
+        if (!isActiveStatus(status) && !removeTerminal) {
+          return true
+        }
+
+        await syncInstanceStatus(
+          redis,
+          teamId,
+          challenge.id,
+          status,
+          instancerConfig.timeoutMilliseconds
+        )
+        return true
+      } catch {
+        return false
+      }
+    })
+  )
+
+  return results.every(Boolean)
+}
+
+export const initializeTeamInstances = async (
+  redis: TypedRedis,
+  db: DatabaseClient,
+  teamId: string
+): Promise<boolean> => {
+  const initializedKey = teamInstancesInitializedKey(teamId)
+  if (await redis.exists(initializedKey)) {
+    return true
+  }
+
+  const reconciled = await reconcileChallenges(
+    redis,
+    teamId,
+    await getPrivateChallenges(db),
+    false
+  )
+  if (reconciled) {
+    await redis.set(initializedKey, '1')
+  }
+  return reconciled
+}
+
+const reconcileTrackedInstances = async (
+  redis: TypedRedis,
+  db: DatabaseClient,
+  teamId: string
+): Promise<boolean> => {
+  const challengeIds = await redis.zrange(teamInstancesKey(teamId), 0, -1)
+  const reservations = new Set(
+    await redis.zrange(teamInstanceReservationsKey(teamId), 0, -1)
+  )
+  const challenges = await Promise.all(
+    challengeIds
+      .filter(challengeId => !reservations.has(challengeId))
+      .map(challengeId => getPrivateChallenge(db, challengeId))
+  )
+
+  if (challenges.some(challenge => challenge === undefined)) {
+    return false
+  }
+
+  return await reconcileChallenges(
+    redis,
+    teamId,
+    challenges as Challenge[],
+    true
+  )
+}
+
+export const requestInstanceReservation = async (
+  redis: TypedRedis,
+  db: DatabaseClient,
+  teamId: string,
+  challengeId: string,
+  timeoutMilliseconds: number,
+  maxInstances?: number
+): Promise<InstanceReservation> => {
+  if (maxInstances === undefined) {
+    return 'disabled'
+  }
+
+  if (!(await initializeTeamInstances(redis, db, teamId))) {
+    return 'unavailable'
+  }
+
+  let reservation = await reserveInstanceSlot(
+    redis,
+    teamId,
+    challengeId,
+    maxInstances,
+    timeoutMilliseconds
+  )
+  if (reservation !== 'limit') {
+    return reservation
+  }
+
+  if (!(await reconcileTrackedInstances(redis, db, teamId))) {
+    return 'unavailable'
+  }
+
+  reservation = await reserveInstanceSlot(
+    redis,
+    teamId,
+    challengeId,
+    maxInstances,
+    timeoutMilliseconds
+  )
+  return reservation
 }

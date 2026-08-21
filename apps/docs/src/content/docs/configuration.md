@@ -444,7 +444,7 @@ leaderboard:
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `<red>maxAvatarSize</red>` | `number{:ts}` | `1048576{:ts}` (1 MB) | Maximum avatar upload size in bytes. The production container's nginx body limit for the avatar endpoint is generated from this value at startup |
-| `<red>maxInstances</red>` | `number{:ts}` | - | Maximum concurrent active challenge instances allowed per team. When unset or `0{:ts}`, teams can start unlimited instances. |
+| `<red>maxInstances</red>` | `number{:ts}` | - | Maximum concurrent active challenge instances allowed per team. When unset, teams can start unlimited instances. |
 | `<red>leaderboard.maxLimit</red>` | `number{:ts}` | `100{:ts}` | Max teams returned per leaderboard request |
 | `<red>leaderboard.maxOffset</red>` | `number{:ts}` | `4294967296{:ts}` | Max pagination offset |
 | `<red>leaderboard.updateInterval</red>` | `number{:ts}` | `30000{:ts}` (30s) | Leaderboard recalculation interval in ms |

@@ -24,9 +24,5 @@ export const normalizeConfig = (config: ServerConfig): ServerConfig => {
     }
   }
 
-  if (config.maxInstances === undefined && config.maxInstance !== undefined) {
-    config.maxInstances = config.maxInstance
-  }
-
   return config
 }

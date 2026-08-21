@@ -1,5 +1,6 @@
 import { config } from '@rctf/config'
 import {
+  BadInstancerError,
   BadTooManyInstances,
   GoodChallengeUpdateV2,
   GoodInstanceStatus,
@@ -8,6 +9,10 @@ import {
 } from '@rctf/types'
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import type { Hono } from 'hono'
+import {
+  teamInstancesInitializedKey,
+  teamInstancesKey,
+} from '../../../../apps/api/src/cache/instance-limiter'
 import { createToken, TokenKind } from '../../../../apps/api/src/lib/tokens'
 import {
   instancers,
@@ -19,6 +24,7 @@ import {
   type ExtendInstanceOptions,
   type InstanceQueryOptions,
 } from '../../../../apps/api/src/providers/instancer/base'
+import { createRedis } from '../../../../apps/api/src/util/redis'
 import { getApp, request } from '../../app'
 import { expectResponse, generateRealTestUser } from '../../util'
 
@@ -29,8 +35,50 @@ class TestInstancerProvider extends InstancerProvider {
   readonly capabilities = { canStop: true, canExtend: true }
   getDefaults = () => ({})
   private runningInstances = new Set<string>()
+  private deleteErrors = new Set<string>()
+  private getErrors = new Set<string>()
+  private createDelayMilliseconds = 0
+
+  seedRunning = (teamId: string, challengeIntegrationId: string) => {
+    this.runningInstances.add(`${teamId}:${challengeIntegrationId}`)
+  }
+
+  clearRunning = (teamId: string, challengeIntegrationId: string) => {
+    this.runningInstances.delete(`${teamId}:${challengeIntegrationId}`)
+  }
+
+  setCreateDelay = (delayMilliseconds: number) => {
+    this.createDelayMilliseconds = delayMilliseconds
+  }
+
+  setGetError = (
+    teamId: string,
+    challengeIntegrationId: string,
+    enabled: boolean
+  ) => {
+    const key = `${teamId}:${challengeIntegrationId}`
+    if (enabled) {
+      this.getErrors.add(key)
+    } else {
+      this.getErrors.delete(key)
+    }
+  }
+
+  setDeleteError = (
+    teamId: string,
+    challengeIntegrationId: string,
+    enabled: boolean
+  ) => {
+    const key = `${teamId}:${challengeIntegrationId}`
+    if (enabled) {
+      this.deleteErrors.add(key)
+    } else {
+      this.deleteErrors.delete(key)
+    }
+  }
 
   createInstance = async (options: CreateInstanceOptions) => {
+    await Bun.sleep(this.createDelayMilliseconds)
     this.runningInstances.add(
       `${options.user.id}:${options.challengeIntegrationId}`
     )
@@ -43,9 +91,15 @@ class TestInstancerProvider extends InstancerProvider {
   }
 
   getInstance = async (options: InstanceQueryOptions) => {
-    const isRunning = this.runningInstances.has(
-      `${options.teamId}:${options.challengeIntegrationId}`
-    )
+    const key = `${options.teamId}:${options.challengeIntegrationId}`
+    if (this.getErrors.has(key)) {
+      return {
+        kind: 'instancerError' as const,
+        message: 'temporary status failure',
+      }
+    }
+
+    const isRunning = this.runningInstances.has(key)
     return {
       kind: 'instancerInstanceDetails' as const,
       status: isRunning ? InstanceStatus.RUNNING : InstanceStatus.STOPPED,
@@ -55,9 +109,15 @@ class TestInstancerProvider extends InstancerProvider {
   }
 
   deleteInstance = async (options: InstanceQueryOptions) => {
-    this.runningInstances.delete(
-      `${options.teamId}:${options.challengeIntegrationId}`
-    )
+    const key = `${options.teamId}:${options.challengeIntegrationId}`
+    if (this.deleteErrors.has(key)) {
+      return {
+        kind: 'instancerError' as const,
+        message: 'temporary delete failure',
+      }
+    }
+
+    this.runningInstances.delete(key)
     return {
       kind: 'instancerInstanceDetails' as const,
       status: InstanceStatus.STOPPED,
@@ -82,6 +142,7 @@ let adminData: Awaited<ReturnType<typeof generateRealTestUser>>
 let chall1Id: string
 let chall2Id: string
 let chall3Id: string
+let testProvider: TestInstancerProvider
 
 beforeAll(async () => {
   app = await getApp()
@@ -90,7 +151,8 @@ beforeAll(async () => {
     Permissions.challsRead | Permissions.challsWrite
   )
 
-  instancers['mock-provider'] = new TestInstancerProvider({})
+  testProvider = new TestInstancerProvider({})
+  instancers['mock-provider'] = testProvider
   setInstancerEnabled(true)
 
   const adminToken = await createToken(TokenKind.Auth, adminData.user.id)
@@ -139,6 +201,152 @@ afterAll(async () => {
 })
 
 describe('instancer maxInstances limiter integration', () => {
+  test('atomically enforces the limit for concurrent starts', async () => {
+    config.maxInstances = 1
+    const testUser = await generateRealTestUser()
+
+    try {
+      const userToken = await createToken(TokenKind.Auth, testUser.user.id)
+      testProvider.setCreateDelay(50)
+      const responses = await Promise.all(
+        [chall1Id, chall2Id].map(challId =>
+          request(app, `/api/v2/integrations/challs/${challId}/instance`, {
+            method: 'PUT',
+            headers: {
+              Authorization: `Bearer ${userToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({}),
+          })
+        )
+      )
+
+      expect(responses.map(response => response.status).sort()).toEqual([
+        200, 409,
+      ])
+    } finally {
+      testProvider.setCreateDelay(0)
+      testProvider.clearRunning(testUser.user.id, 'chall-1-int')
+      testProvider.clearRunning(testUser.user.id, 'chall-2-int')
+      config.maxInstances = undefined
+      await testUser.cleanup()
+    }
+  })
+
+  test('reconciles running provider instances when limiter state is missing', async () => {
+    config.maxInstances = 1
+    const testUser = await generateRealTestUser()
+
+    try {
+      const userToken = await createToken(TokenKind.Auth, testUser.user.id)
+      testProvider.seedRunning(testUser.user.id, 'chall-1-int')
+
+      const redis = await createRedis()
+      await redis.del(
+        teamInstancesKey(testUser.user.id),
+        teamInstancesInitializedKey(testUser.user.id)
+      )
+
+      const res = await request(
+        app,
+        `/api/v2/integrations/challs/${chall2Id}/instance`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({}),
+        }
+      )
+      await expectResponse(res, BadTooManyInstances)
+    } finally {
+      testProvider.clearRunning(testUser.user.id, 'chall-1-int')
+      config.maxInstances = undefined
+      await testUser.cleanup()
+    }
+  })
+
+  test('fails closed when initial provider reconciliation is unavailable', async () => {
+    config.maxInstances = 1
+    const testUser = await generateRealTestUser()
+
+    try {
+      const userToken = await createToken(TokenKind.Auth, testUser.user.id)
+      testProvider.setGetError(testUser.user.id, 'chall-1-int', true)
+
+      const res = await request(
+        app,
+        `/api/v2/integrations/challs/${chall2Id}/instance`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({}),
+        }
+      )
+      await expectResponse(res, BadInstancerError)
+    } finally {
+      testProvider.setGetError(testUser.user.id, 'chall-1-int', false)
+      config.maxInstances = undefined
+      await testUser.cleanup()
+    }
+  })
+
+  test('keeps the slot when the provider fails to delete an instance', async () => {
+    config.maxInstances = 1
+    const testUser = await generateRealTestUser()
+
+    try {
+      const userToken = await createToken(TokenKind.Auth, testUser.user.id)
+      let res = await request(
+        app,
+        `/api/v2/integrations/challs/${chall1Id}/instance`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({}),
+        }
+      )
+      await expectResponse(res, GoodInstanceStatus)
+
+      testProvider.setDeleteError(testUser.user.id, 'chall-1-int', true)
+      res = await request(
+        app,
+        `/api/v2/integrations/challs/${chall1Id}/instance`,
+        {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${userToken}` },
+        }
+      )
+      await expectResponse(res, BadInstancerError)
+
+      res = await request(
+        app,
+        `/api/v2/integrations/challs/${chall2Id}/instance`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({}),
+        }
+      )
+      await expectResponse(res, BadTooManyInstances)
+    } finally {
+      testProvider.setDeleteError(testUser.user.id, 'chall-1-int', false)
+      testProvider.clearRunning(testUser.user.id, 'chall-1-int')
+      config.maxInstances = undefined
+      await testUser.cleanup()
+    }
+  })
+
   test('enforces maxInstances limit on PUT /instance and allows after DELETE', async () => {
     config.maxInstances = 2
     const userToken = await createToken(TokenKind.Auth, userData.user.id)

@@ -1,5 +1,6 @@
+import { config } from '@rctf/config'
 import { DeleteInstanceRouteV2 } from '@rctf/types'
-import { recordInstanceStopped } from '../../../../cache/instance-limiter'
+import { syncInstanceStatus } from '../../../../cache/instance-limiter'
 import {
   filterInstanceEndpoints,
   getInstancerChallenge,
@@ -32,7 +33,15 @@ integrationsGroup.route(
       config: challenge.data.instancerConfig!.config,
     })
 
-    await recordInstanceStopped(ctx.var.redis, user.id, challenge.id)
+    if (config.maxInstances !== undefined) {
+      await syncInstanceStatus(
+        ctx.var.redis,
+        user.id,
+        challenge.id,
+        instanceStatus,
+        challenge.data.instancerConfig!.timeoutMilliseconds
+      )
+    }
 
     return await returnInstanceStatusOrError(
       res,
