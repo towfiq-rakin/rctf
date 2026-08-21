@@ -28,6 +28,8 @@ order: 4
 
 This route asks the instancer provider to start an instance for the authenticated team. If the provider needs time to finish provisioning, the response can report `starting` before a later status request reports `running`.
 
+When [`maxInstances`](/configuration#limits) is configured, attempting to start an instance while already at the active instance limit returns `<response>409 badTooManyInstances</response>`.
+
 Captcha is checked only when the deployment protects `instancerStart{:ts}`.
 
 ::request-body{def="CreateInstanceRouteV2" source="params" title="Path parameters"}

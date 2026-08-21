@@ -11,6 +11,7 @@ import {
   BadPerms,
   BadRateLimit,
   BadToken,
+  BadTooManyInstances,
   ErrorInternal,
   GoodAdminBotConfig,
   GoodAdminBotJobHistory,
@@ -61,6 +62,7 @@ export const CreateInstanceRouteV2 = defineRoute({
   goodResponses: [GoodInstanceStatus],
   badResponses: [
     BadInstancerError,
+    BadTooManyInstances,
     BadEndpoint,
     BadChallenge,
     BadCaptcha,

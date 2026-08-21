@@ -1,4 +1,5 @@
 import { DeleteInstanceRouteV2 } from '@rctf/types'
+import { recordInstanceStopped } from '../../../../cache/instance-limiter'
 import {
   filterInstanceEndpoints,
   getInstancerChallenge,
@@ -30,6 +31,8 @@ integrationsGroup.route(
       challengeIntegrationId: inferChallengeIntegrationId(challenge),
       config: challenge.data.instancerConfig!.config,
     })
+
+    await recordInstanceStopped(ctx.var.redis, user.id, challenge.id)
 
     return await returnInstanceStatusOrError(
       res,

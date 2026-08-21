@@ -61,6 +61,16 @@ Each provider documents its `<red>options</red>` fields and environment override
 - [Docker instancer provider options](/integrations/instancer/docker#provider-options)
 - [Kubernetes instancer provider options](/integrations/instancer/kubernetes#provider-options)
 
+## Limiting active instances
+
+By default, teams can create instances across all instanced challenges simultaneously. You can set [`<red>maxInstances</red>`](/configuration#limits) in your `rctf.d/{:dir}` config (or via `<yellow>RCTF_MAX_INSTANCES</yellow>`) to cap the number of concurrent active instances a team can have:
+
+```yaml title="rctf.d/instancer.yaml"
+maxInstances: 2
+```
+
+When a team reaches this limit, attempts to start an instance on another challenge return `<response>409 badTooManyInstances</response>` until they stop one of their active instances or it expires.
+
 ## Challenge configuration
 
 Each instanced challenge needs `<red>instancerConfig</red>`. Its ID, timeout, extension setting, and exposed endpoints work the same with either provider. The contents of `<red>config</red>` depend on whether the challenge uses Docker or Kubernetes.

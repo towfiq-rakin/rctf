@@ -94,6 +94,12 @@ The following environment variables are supported. They override values from con
 | `<yellow>RCTF_LEADERBOARD_GRAPH_MAX_TEAMS</yellow>`   | `integer{:ts}` | Max teams on score graph         |
 | `<yellow>RCTF_LEADERBOARD_GRAPH_SAMPLE_TIME</yellow>` | `integer{:ts}` | Graph sample interval (ms)       |
 
+### Limits
+
+| Variable | Type | Description |
+| --- | --- | --- |
+| `<yellow>RCTF_MAX_INSTANCES</yellow>` | `integer{:ts}` | Max concurrent active instances per team (optional) |
+
 :::note
 Boolean environment variables accept `<green>true</green>`, `<green>yes</green>`, `<green>y</green>`, or `<green>1</green>` as truthy values. Anything else is treated as false.
 :::
@@ -425,6 +431,7 @@ analytics:
 
 ```yaml
 maxAvatarSize: 1048576 # 1 MB
+maxInstances: 2 # Maximum concurrent active challenge instances per team (optional)
 leaderboard:
   maxLimit: 100
   maxOffset: 4294967296
@@ -437,6 +444,7 @@ leaderboard:
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `<red>maxAvatarSize</red>` | `number{:ts}` | `1048576{:ts}` (1 MB) | Maximum avatar upload size in bytes. The production container's nginx body limit for the avatar endpoint is generated from this value at startup |
+| `<red>maxInstances</red>` | `number{:ts}` | - | Maximum concurrent active challenge instances allowed per team. When unset or `0{:ts}`, teams can start unlimited instances. |
 | `<red>leaderboard.maxLimit</red>` | `number{:ts}` | `100{:ts}` | Max teams returned per leaderboard request |
 | `<red>leaderboard.maxOffset</red>` | `number{:ts}` | `4294967296{:ts}` | Max pagination offset |
 | `<red>leaderboard.updateInterval</red>` | `number{:ts}` | `30000{:ts}` (30s) | Leaderboard recalculation interval in ms |

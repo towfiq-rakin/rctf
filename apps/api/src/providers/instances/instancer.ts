@@ -12,4 +12,7 @@ export const instancers: Record<string, InstancerProvider> = Object.fromEntries(
   ])
 )
 export const defaultInstancerName = resolvedInstancers.defaultName
-export const instancerEnabled = Object.keys(instancers).length > 0
+export let instancerEnabled = Object.keys(instancers).length > 0
+export const setInstancerEnabled = (enabled: boolean) => {
+  instancerEnabled = enabled
+}

@@ -1,4 +1,5 @@
 import { ExtendInstanceRouteV2 } from '@rctf/types'
+import { recordInstanceExtended } from '../../../../cache/instance-limiter'
 import {
   filterInstanceEndpoints,
   getInstancerChallenge,
@@ -37,6 +38,18 @@ integrationsGroup.route(
       timeoutMilliseconds: challenge.data.instancerConfig!.timeoutMilliseconds,
       config: challenge.data.instancerConfig!.config,
     })
+
+    if (
+      instanceStatus.kind === 'instancerInstanceDetails' &&
+      instanceStatus.timeLeftMilliseconds !== null
+    ) {
+      await recordInstanceExtended(
+        ctx.var.redis,
+        user.id,
+        challenge.id,
+        instanceStatus.timeLeftMilliseconds
+      )
+    }
 
     return await returnInstanceStatusOrError(
       res,

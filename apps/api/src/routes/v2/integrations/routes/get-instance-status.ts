@@ -1,4 +1,5 @@
 import { GetInstanceStatusRouteV2 } from '@rctf/types'
+import { syncInstanceStatus } from '../../../../cache/instance-limiter'
 import {
   filterInstanceEndpoints,
   getInstancerChallenge,
@@ -24,6 +25,13 @@ integrationsGroup.route(
       challengeIntegrationId: inferChallengeIntegrationId(challenge),
       config: challenge.data.instancerConfig!.config,
     })
+
+    await syncInstanceStatus(
+      ctx.var.redis,
+      user.id,
+      challenge.id,
+      instanceStatus
+    )
 
     return await returnInstanceStatusOrError(
       res,
