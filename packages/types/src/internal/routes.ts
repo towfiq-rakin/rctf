@@ -17,6 +17,7 @@ export interface RouteConfig {
   goodResponses: ResponseCollection
   badResponses?: ResponseCollection
   authRequired?: boolean
+  authConfig?: 'challengesRequireAuth'
   optionalAuth?: boolean
   body?: Schema
   params?: Schema
@@ -43,6 +44,7 @@ export interface RouteDefinition<T extends RouteConfig = RouteConfig> {
   readonly authRequired: T['authRequired'] extends boolean
     ? T['authRequired']
     : false
+  readonly authConfig: T['authConfig']
   readonly optionalAuth: T['optionalAuth'] extends boolean
     ? T['optionalAuth']
     : false
@@ -81,6 +83,7 @@ export function defineRoute<const T extends RouteConfig>(
       []) as RouteDefinition<T>['badResponses'],
     authRequired: (config.authRequired ??
       false) as RouteDefinition<T>['authRequired'],
+    authConfig: config.authConfig,
     optionalAuth: (config.optionalAuth ??
       false) as RouteDefinition<T>['optionalAuth'],
     params: config.params,

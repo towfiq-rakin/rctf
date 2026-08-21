@@ -1,20 +1,29 @@
 <script lang="ts">
-  import { isAuthenticated } from '$lib/api'
   import CtfNotStarted from '$lib/components/ctf-not-started.svelte'
-  import { IconFlagBannerFold } from '$lib/icons'
+  import { IconFlagBannerFold, IconSignIn } from '$lib/icons'
   import { useChallenges } from '$lib/query/challenges'
   import { useClientConfig } from '$lib/query/config'
   import { ApiError } from '$lib/query/core'
+  import { useCurrentUser } from '$lib/query/user'
   import Button from '$lib/ui/button.svelte'
   import Card from '$lib/ui/card.svelte'
   import EmptyState from '$lib/ui/empty-state.svelte'
   import Spinner from '$lib/ui/spinner.svelte'
+  import StatusCard from '$lib/ui/status-card.svelte'
   import Challenges from './challenges.svelte'
 
   const configQuery = useClientConfig()
+  const userQuery = useCurrentUser()
   const ctfName = $derived(configQuery.data?.ctfName)
+  const requiresAuth = $derived(
+    configQuery.data?.challengesRequireAuth ?? true
+  )
+  const canViewChallenges = $derived(!requiresAuth || userQuery.data != null)
+  const isGatePending = $derived(
+    configQuery.isLoading || (requiresAuth && userQuery.isLoading)
+  )
 
-  const challengesQuery = useChallenges()
+  const challengesQuery = useChallenges(() => canViewChallenges)
   const challenges = $derived(challengesQuery.data)
   const isPending = $derived(challengesQuery.isPending)
   const error = $derived(challengesQuery.error)
@@ -29,7 +38,21 @@
   {/if}
 </svelte:head>
 
-{#if challenges && challenges.length > 0}
+{#if isGatePending}
+  <page-status>
+    <Spinner />
+  </page-status>
+{:else if !canViewChallenges}
+  <page-status>
+    <StatusCard
+      icon={IconSignIn}
+      title="Login required"
+      subtitle="Log in to view the challenges for this event."
+    >
+      <Button href="/login?next=/challenges">Login</Button>
+    </StatusCard>
+  </page-status>
+{:else if challenges && challenges.length > 0}
   <challenges-reveal data-reveal={revealAfterLoading || undefined}>
     <Challenges />
   </challenges-reveal>
@@ -43,9 +66,6 @@
   <page-status>
     <Card title="Challenges">
       <p>{error.message}</p>
-      {#if !isAuthenticated()}
-        <Button href="/login">Login</Button>
-      {/if}
     </Card>
   </page-status>
 {:else}

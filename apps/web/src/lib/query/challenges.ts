@@ -77,8 +77,11 @@ export const challengesQueryOptions = queryOptions({
   refetchInterval: 30 * 1000,
 })
 
-export function useChallenges() {
-  return createQuery(() => challengesQueryOptions)
+export function useChallenges(enabled: () => boolean = () => true) {
+  return createQuery(() => ({
+    ...challengesQueryOptions,
+    enabled: enabled(),
+  }))
 }
 
 export function challengeScoresQueryOptions(

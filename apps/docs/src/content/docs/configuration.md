@@ -227,6 +227,7 @@ Division ACLs require an email provider. Disable CTFtime authentication when usi
 
 ```yaml
 registrationsEnabled: true
+challengesRequireAuth: true
 userMembers: true
 maxMembers: 50
 loginTimeout: 3600000
@@ -238,6 +239,7 @@ ctftime:
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `<red>registrationsEnabled</red>` | `boolean{:ts}` | `true{:ts}` | Whether new registrations are allowed |
+| `<red>challengesRequireAuth</red>` | `boolean{:ts}` | `true{:ts}` | Require users to log in before viewing challenges |
 | `<red>userMembers</red>` | `boolean{:ts}` | `true{:ts}` | Enable team members feature |
 | `<red>maxMembers</red>` | `number{:ts}` | `50{:ts}` | Maximum members per team |
 | `<red>loginTimeout</red>` | `number{:ts}` | `3600000{:ts}` | Verification/CTFtime token expiry in milliseconds (1 hour) |

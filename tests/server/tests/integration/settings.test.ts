@@ -651,6 +651,7 @@ describe('admin settings', () => {
       expect(body.data.ctfName).toBe(config.ctfName)
       expect(body.data.homeContent).toBe(config.homeContent)
       expect(body.data.divisions).toEqual(config.divisions)
+      expect(body.data.challengesRequireAuth).toBe(config.challengesRequireAuth)
     })
 
     test('v2 client config uses DB overrides for ctfName', async () => {
@@ -917,6 +918,7 @@ describe('admin settings', () => {
 
       const res = await request(app, '/api/v2/challs', {
         method: 'GET',
+        headers: await authHeaders(settingsAdmin.user.id),
       })
       await expectResponse(res, BadNotStarted)
     })

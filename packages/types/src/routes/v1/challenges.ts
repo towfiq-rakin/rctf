@@ -21,8 +21,9 @@ export const GetChallengesRoute = defineRoute({
   path: '/v1/challs',
   method: 'GET',
   goodResponses: [GoodChallenges],
-  badResponses: [BadNotStarted],
+  badResponses: [BadNotStarted, BadToken],
   authRequired: false,
+  authConfig: 'challengesRequireAuth',
   onlyWhenStarted: true,
   onlyWhenStartedPermissionsBypass: Permissions.challsRead,
 })

@@ -179,7 +179,9 @@ describe('multi-flag submission', () => {
     expect(flagged).not.toHaveProperty('flag')
     expect(JSON.stringify(v2Body)).not.toContain('flag{secret}')
 
-    const v1Res = await request(app, '/api/v1/challs', {})
+    const v1Res = await request(app, '/api/v1/challs', {
+      headers: { Authorization: `Bearer ${authToken}` },
+    })
     const v1Body = await expectResponse(v1Res, GoodChallenges)
 
     const v1Found = v1Body.data.find((c: any) => c.id === withFlags)

@@ -72,6 +72,9 @@ export const GoodClientConfigV2 = response('goodClientConfigV2', {
     registrationsEnabled: example(z.nullable(z.boolean()), true).check(
       z.describe('Whether registrations are open, or `null` when unset.')
     ),
+    challengesRequireAuth: example(z.boolean(), true).check(
+      z.describe('Whether authentication is required to view challenges.')
+    ),
     ctftime: z
       .nullable(
         z.object({

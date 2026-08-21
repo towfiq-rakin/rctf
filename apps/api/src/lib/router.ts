@@ -1,3 +1,4 @@
+import { config } from '@rctf/config'
 import type { User } from '@rctf/db'
 import type {
   AnyRouteDefinition,
@@ -247,8 +248,13 @@ export const declareRouter = <
       return timing
     }
 
+    const requiresConfiguredAuth =
+      definition.authConfig === 'challengesRequireAuth' &&
+      config.challengesRequireAuth
     const requiresAuth =
-      definition.authRequired || (definition.permissions ?? 0) !== 0
+      definition.authRequired ||
+      requiresConfiguredAuth ||
+      (definition.permissions ?? 0) !== 0
     const wantsOptionalAuth =
       definition.optionalAuth === true ||
       definition.onlyWhenStartedPermissionsBypass !== undefined
