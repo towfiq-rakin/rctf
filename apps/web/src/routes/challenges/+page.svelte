@@ -1,6 +1,6 @@
 <script lang="ts">
   import CtfNotStarted from '$lib/components/ctf-not-started.svelte'
-  import { IconFlagBannerFold, IconSignIn } from '$lib/icons'
+  import { IconFlagBannerFold } from '$lib/icons'
   import { useChallenges } from '$lib/query/challenges'
   import { useClientConfig } from '$lib/query/config'
   import { ApiError } from '$lib/query/core'
@@ -9,7 +9,6 @@
   import Card from '$lib/ui/card.svelte'
   import EmptyState from '$lib/ui/empty-state.svelte'
   import Spinner from '$lib/ui/spinner.svelte'
-  import StatusCard from '$lib/ui/status-card.svelte'
   import Challenges from './challenges.svelte'
 
   const configQuery = useClientConfig()
@@ -44,13 +43,12 @@
   </page-status>
 {:else if !canViewChallenges}
   <page-status>
-    <StatusCard
-      icon={IconSignIn}
+    <Card
       title="Login required"
-      subtitle="Log in to view the challenges for this event."
+      description="Log in to view the challenges."
     >
-      <Button href="/login?next=/challenges">Login</Button>
-    </StatusCard>
+      <Button href="/login">Login</Button>
+    </Card>
   </page-status>
 {:else if challenges && challenges.length > 0}
   <challenges-reveal data-reveal={revealAfterLoading || undefined}>
