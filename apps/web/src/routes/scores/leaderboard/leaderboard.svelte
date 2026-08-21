@@ -740,7 +740,9 @@
       inset-block-start: 0;
       z-index: 20;
       block-size: var(--score-header-height);
-      background: var(--background-l0);
+      background: color-mix(in srgb, var(--background-l0) 65%, transparent);
+      backdrop-filter: blur(16px) saturate(180%);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
     }
 
     header-corner {
@@ -750,7 +752,7 @@
       flex-shrink: 0;
       inline-size: var(--score-team-column-width);
       block-size: 100%;
-      background: var(--background-l0);
+      background: transparent;
     }
 
     graph-panel {
