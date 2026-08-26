@@ -741,8 +741,8 @@
       z-index: 20;
       block-size: var(--score-header-height);
       background: color-mix(in srgb, var(--background-l0) 65%, transparent);
-      backdrop-filter: blur(16px) saturate(180%);
       -webkit-backdrop-filter: blur(16px) saturate(180%);
+      backdrop-filter: blur(16px) saturate(180%);
     }
 
     header-corner {
