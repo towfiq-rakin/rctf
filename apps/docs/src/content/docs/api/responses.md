@@ -93,6 +93,7 @@ Unknown API routes usually return `<response>404 badEndpoint</response>`. Unexpe
 | `<response>400 badModerationNotPassed</response>` | No data | Avatar moderation did not approve the image. |
 | `<response>400 badInstancerConfig</response>` | `{ error: string }{:ts}` | The instancer provider did not accept the challenge config. |
 | `<response>400 badInstancerError</response>` | `{ message: string }{:ts}` | The instancer could not create, read, extend, or stop the instance. |
+| `<response>409 badTooManyInstances</response>` | No data | The team has reached the `maxInstances` limit of active challenge instances. |
 | `<response>400 badInstancerState</response>` | `{ error: string }{:ts}` | The admin bot route needs a running instance, but one was not available. |
 | `<response>400 badAdminBotConfig</response>` | `{ error: string }{:ts}` | The admin bot provider did not accept the challenge source. |
 | `<response>404 badUnknownVerification</response>` | No data | The pending user verification was not found. |

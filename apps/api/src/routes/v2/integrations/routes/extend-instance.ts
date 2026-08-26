@@ -1,4 +1,6 @@
+import { config } from '@rctf/config'
 import { ExtendInstanceRouteV2 } from '@rctf/types'
+import { syncInstanceStatus } from '../../../../cache/instance-limiter'
 import {
   filterInstanceEndpoints,
   getInstancerChallenge,
@@ -37,6 +39,16 @@ integrationsGroup.route(
       timeoutMilliseconds: challenge.data.instancerConfig!.timeoutMilliseconds,
       config: challenge.data.instancerConfig!.config,
     })
+
+    if (config.maxInstances !== undefined) {
+      await syncInstanceStatus(
+        ctx.var.redis,
+        user.id,
+        challenge.id,
+        instanceStatus,
+        challenge.data.instancerConfig!.timeoutMilliseconds
+      )
+    }
 
     return await returnInstanceStatusOrError(
       res,

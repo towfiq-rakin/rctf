@@ -167,6 +167,7 @@ export const ServerConfigSchema = z.object({
 
   // Limits
   maxAvatarSize: z._default(z.number(), 1024 * 1024),
+  maxInstances: z.optional(z.int().check(z.gte(1))),
   leaderboard: z.prefault(
     z.object({
       maxLimit: z._default(z.number(), 100),
