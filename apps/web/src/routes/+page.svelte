@@ -100,8 +100,7 @@
       flex-direction: column;
       gap: var(--space-xs);
       padding: var(--space-s);
-      border-radius: var(--radius-md);
-      background: var(--background-l2);
+      background: transparent;
     }
 
     a {
@@ -109,7 +108,7 @@
     }
 
     a:hover {
-      background: var(--background-l3);
+      opacity: 0.85;
     }
 
     sponsor-icon[data-invert] img {
