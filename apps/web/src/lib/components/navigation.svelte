@@ -10,6 +10,7 @@
   import ThemeToggle from '$lib/components/theme-toggle.svelte'
   import {
     IconCopy,
+    IconDiscordLogo,
     IconFlagBannerFold,
     IconGavel,
     IconGear,
@@ -35,6 +36,9 @@
   import { createRovingFocus } from '$lib/utils/roving'
 
   const rovingFocus = createRovingFocus()
+
+  // Replace this demo invite with the event's Discord server URL.
+  const discordServerUrl = 'https://discord.gg/example'
 
   const queryClient = useQueryClient()
   const configQuery = useClientConfig()
@@ -162,6 +166,18 @@
             activePath="/scores"
             label="Scoreboard"
             icon={IconGlobeHemisphereWest}
+          />
+        {/snippet}
+      </Tooltip>
+      <Tooltip label="Discord">
+        {#snippet children({ props })}
+          <NavigationButton
+            {...props}
+            data-roving
+            href={discordServerUrl}
+            external
+            label="Discord"
+            icon={IconDiscordLogo}
           />
         {/snippet}
       </Tooltip>

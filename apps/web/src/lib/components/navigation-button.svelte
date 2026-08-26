@@ -5,12 +5,20 @@
   type Props = {
     href?: string
     activePath?: string
+    external?: boolean
     label: string
     icon: Component
     [key: string]: unknown
   }
 
-  let { href, activePath, label, icon: Icon, ...rest }: Props = $props()
+  let {
+    href,
+    activePath,
+    external = false,
+    label,
+    icon: Icon,
+    ...rest
+  }: Props = $props()
 
   const active = $derived.by(() => {
     if (!activePath) return false
@@ -25,6 +33,8 @@
     aria-label={label}
     aria-current={active ? 'page' : undefined}
     data-active={active ? '' : undefined}
+    target={external ? '_blank' : undefined}
+    rel={external ? 'noopener noreferrer' : undefined}
     {...rest}
   >
     <Icon />
