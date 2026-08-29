@@ -13,7 +13,7 @@ export default class SekaiProvider implements ScoreProvider {
   calculate(ctx: ScoreContext): number {
     const { minPoints, maxPoints, solves } = ctx
     const gradient = 10
-    const decay = 60
+    const decay = 50
 
     const min = 1 + (gradient - 1) / decay
     const x = 1 + ((gradient - 1) / decay) * solves
