@@ -7,14 +7,52 @@
   const { data }: PageProps = $props()
 </script>
 
-<ParticleText 
-  text="BUP CSE Fest 2026 CTF" 
-  color="#ff0000"
-  fontSize="clamp(2rem, 10vw, 6rem)"
-  fontWeight={600}
-  pointerRepel={20}
-  particleSize={2}
-/>
+<div class="desktop-title">
+  <ParticleText
+    text="BUP CSE FEST 2026 CTF"
+    color="#ff0000"
+    fontSize="clamp(2rem, 14vw, 6rem)"
+    fontWeight={600}
+    pointerRepel={20}
+    particleSize={2}
+  />
+</div>
+
+<div class="mobile-title" aria-label="BUP CSE FEST 2026 CTF">
+  <div class="mobile-title__line mobile-title__line--left">
+    <ParticleText
+      text="BUP"
+      color="#ff0000"
+      fontSize="clamp(2.5rem, 14vw, 4rem)"
+      fontWeight={600}
+      pointerRepel={20}
+      particleSize={2}
+      style={{ height: '5rem', minHeight: '5rem' }}
+    />
+  </div>
+  <div class="mobile-title__line mobile-title__line--center">
+    <ParticleText
+      text="CSE FEST 2026"
+      color="#ff0000"
+      fontSize="clamp(2.5rem, 14vw, 4rem)"
+      fontWeight={600}
+      pointerRepel={20}
+      particleSize={2}
+      style={{ height: '5rem', minHeight: '5rem' }}
+    />
+  </div>
+  <div class="mobile-title__line mobile-title__line--right">
+    <ParticleText
+      text="CTF"
+      color="#ff0000"
+      fontSize="clamp(2.5rem, 14vw, 4rem)"
+      fontWeight={600}
+      pointerRepel={20}
+      particleSize={2}
+      style={{ height: '5rem', minHeight: '5rem' }}
+    />
+  </div>
+</div>
 <home-page>
   <Card>
     <Markdown content={data.clientConfig.homeContent} />
@@ -74,6 +112,46 @@
 </home-page>
 
 <style>
+  .desktop-title {
+    display: none;
+  }
+
+  .mobile-title {
+    display: grid;
+    gap: 0.25rem;
+    inline-size: 100%;
+    padding-inline: 1rem;
+  }
+
+  .mobile-title__line {
+    inline-size: 100%;
+  }
+
+  .mobile-title__line--left {
+    inline-size: 38%;
+    justify-self: start;
+  }
+
+  .mobile-title__line--center {
+    inline-size: 100%;
+    justify-self: center;
+  }
+
+  .mobile-title__line--right {
+    inline-size: 38%;
+    justify-self: end;
+  }
+
+  @media (width >= 48rem) {
+    .desktop-title {
+      display: block;
+    }
+
+    .mobile-title {
+      display: none;
+    }
+  }
+
   home-page {
     display: flex;
     flex-direction: column;
