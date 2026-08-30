@@ -202,9 +202,9 @@ const reconcileTrackedInstances = async (
   db: DatabaseClient,
   teamId: string
 ): Promise<boolean> => {
-  const challengeIds = await redis.zrange(teamInstancesKey(teamId), 0, -1)
+  const challengeIds = await redis.zrange(teamInstancesKey(teamId), '0', '-1')
   const reservations = new Set(
-    await redis.zrange(teamInstanceReservationsKey(teamId), 0, -1)
+    await redis.zrange(teamInstanceReservationsKey(teamId), '0', '-1')
   )
   const challenges = await Promise.all(
     challengeIds

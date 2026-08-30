@@ -55,6 +55,7 @@ The following environment variables are supported. They override values from con
 | `<yellow>RCTF_REDIS_PORT</yellow>` | `integer{:ts}` | Redis port |
 | `<yellow>RCTF_REDIS_PASSWORD</yellow>` | `string{:ts}` | Redis password |
 | `<yellow>RCTF_REDIS_DATABASE</yellow>` | `integer{:ts}` | Redis database number |
+| `<yellow>RCTF_REDIS_SOCKET_TIMEOUT</yellow>` | `integer{:ts}` | Milliseconds to wait for a reply before the socket is considered dead (default `<green>6000</green>`) |
 
 ### Timing and auth
 
@@ -303,12 +304,17 @@ captcha:
   protectedEndpoints:
     - register
     - recover
+    - setEmail
+    - instancerStart
+    - instancerExtend
+    - avatarUpload
+    - adminBotSubmit
 ```
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `<red>captcha.provider</red>` | `object{:ts}` | - | Captcha provider config (`<red>name</red>` + `<red>options</red>`) |
-| `<red>captcha.protectedEndpoints</red>` | `array{:ts}` | - | List of actions requiring captcha |
+| `<red>captcha.protectedEndpoints</red>` | `array{:ts}` | all actions | List of actions requiring captcha |
 
 Available captcha actions: `<green>register</green>`, `<green>recover</green>`, `<green>setEmail</green>`, `<green>instancerStart</green>`, `<green>instancerExtend</green>`, `<green>avatarUpload</green>`, `<green>adminBotSubmit</green>`.
 
@@ -574,9 +580,6 @@ captcha:
     options:
       siteKey: 0x4AAAAAAA...
       secretKey: 0x4AAAAAAA...
-  protectedEndpoints:
-    - register
-    - recover
 
 email:
   provider:
