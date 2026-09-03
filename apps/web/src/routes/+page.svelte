@@ -62,7 +62,7 @@
   <!-- <h1> Hello World</h1> -->
   
   {#if data.clientConfig.sponsors.length > 0}
-    <Card title="Sponsors">
+    <Card>
       <sponsor-grid>
         {#each data.clientConfig.sponsors as sponsor (sponsor.name)}
           {@const lightIcon = sponsor.iconLight || sponsor.icon}
@@ -176,9 +176,11 @@
     article {
       display: flex;
       flex-direction: column;
+      align-items: center;
       gap: var(--space-xs);
       padding: var(--space-s);
       background: transparent;
+      text-align: center;
     }
 
     a {
