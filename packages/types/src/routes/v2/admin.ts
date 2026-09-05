@@ -637,6 +637,9 @@ const AdminSettingsUpdateBody = z.object({
       homeContent: example(z.nullish(z.string()), '# Welcome').check(
         z.describe('Home page content in Markdown.')
       ),
+      rulesContent: example(z.nullish(z.string()), '# Rules').check(
+        z.describe('Rules and information page content in Markdown.')
+      ),
       startTime: example(z.nullish(z.int()), 1710000000000).check(
         z.describe('CTF start time as a Unix ms timestamp.')
       ),

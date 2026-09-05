@@ -10,6 +10,9 @@ export const AdminSettingsSchema = z.object({
   homeContent: example(z.optional(z.string()), '# Welcome').check(
     z.describe('Markdown content shown on the home page.')
   ),
+  rulesContent: example(z.optional(z.string()), '# Rules').check(
+    z.describe('Markdown content shown on the rules and information page.')
+  ),
   startTime: example(z.optional(z.int()), 1710000000000).check(
     z.describe('CTF start time as a Unix timestamp in milliseconds.')
   ),

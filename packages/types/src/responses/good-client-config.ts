@@ -18,6 +18,9 @@ export const GoodClientConfig = response('goodClientConfig', {
     homeContent: example(z.string(), '# Welcome').check(
       z.describe('Markdown content shown on the home page.')
     ),
+    rulesContent: example(z.string(), '# Rules').check(
+      z.describe('Markdown content shown on the rules and information page.')
+    ),
     sponsors: z.array(
       z.object({
         name: example(z.string(), 'osec').check(z.describe('Sponsor name.')),

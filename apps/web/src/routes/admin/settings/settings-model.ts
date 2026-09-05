@@ -20,6 +20,7 @@ export interface AdminSettingsShape {
   startTime?: number
   endTime?: number
   homeContent?: string
+  rulesContent?: string
   logoLightUrl?: string
   logoDarkUrl?: string
   meta?: { description?: string; imageUrl?: string }
@@ -60,6 +61,7 @@ export interface SettingsFormState {
   timing: TimingGroup
   logo: LogoGroup
   homeContent: ScalarGroup
+  rulesContent: ScalarGroup
   meta: MetaGroup
   sponsors: SponsorsGroup
 }
@@ -70,6 +72,7 @@ export interface SettingsPatch {
   startTime?: number | null
   endTime?: number | null
   homeContent?: string | null
+  rulesContent?: string | null
   logoLightUrl?: string | null
   logoDarkUrl?: string | null
   meta?: { description: string; imageUrl: string } | null
@@ -110,6 +113,12 @@ export function buildPatch(
     patch.homeContent = groupMatchesDefaults(state, 'homeContent', defaults)
       ? null
       : state.homeContent.value
+  }
+
+  if (state.rulesContent.dirty) {
+    patch.rulesContent = groupMatchesDefaults(state, 'rulesContent', defaults)
+      ? null
+      : state.rulesContent.value
   }
 
   if (state.meta.dirty) {
@@ -236,6 +245,10 @@ export function initialFormState(
       value: overrides.homeContent ?? defaults.homeContent ?? '',
       dirty: false,
     },
+    rulesContent: {
+      value: overrides.rulesContent ?? defaults.rulesContent ?? '',
+      dirty: false,
+    },
     meta: {
       description:
         overrides.meta?.description ?? defaults.meta?.description ?? '',
@@ -271,6 +284,8 @@ export function groupMatchesDefaults(
       )
     case 'homeContent':
       return form.homeContent.value === (defaults.homeContent ?? '')
+    case 'rulesContent':
+      return form.rulesContent.value === (defaults.rulesContent ?? '')
     case 'meta':
       return (
         form.meta.description === (defaults.meta?.description ?? '') &&
@@ -297,6 +312,7 @@ const settingsGroupKeys = [
   'timing',
   'logo',
   'homeContent',
+  'rulesContent',
   'meta',
   'sponsors',
 ] as const satisfies readonly (keyof SettingsFormState)[]

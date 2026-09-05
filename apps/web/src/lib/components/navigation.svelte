@@ -16,6 +16,7 @@
     IconGear,
     IconGlobeHemisphereWest,
     IconHouse,
+    IconInfo,
     IconSignIn,
     IconSignOut,
     IconTableFilled,
@@ -142,6 +143,18 @@
             activePath="/"
             label="Home"
             icon={IconHouse}
+          />
+        {/snippet}
+      </Tooltip>
+      <Tooltip label="Rules & Info">
+        {#snippet children({ props })}
+          <NavigationButton
+            {...props}
+            data-roving
+            href="/info"
+            activePath="/info"
+            label="Rules & Info"
+            icon={IconInfo}
           />
         {/snippet}
       </Tooltip>

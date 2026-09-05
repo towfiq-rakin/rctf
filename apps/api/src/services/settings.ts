@@ -79,6 +79,7 @@ export function getConfigDefaults(): EditableSettings {
   return {
     ctfName: config.ctfName,
     homeContent: config.homeContent,
+    rulesContent: config.rulesContent,
     startTime: config.startTime,
     endTime: config.endTime,
     sponsors: config.sponsors,
@@ -93,6 +94,7 @@ export function resolveSettings(overrides: EditableSettings) {
   return {
     ctfName: overrides.ctfName ?? config.ctfName,
     homeContent: overrides.homeContent ?? config.homeContent,
+    rulesContent: overrides.rulesContent ?? config.rulesContent,
     startTime: overrides.startTime ?? config.startTime,
     endTime: overrides.endTime ?? config.endTime,
     sponsors: overrides.sponsors ?? config.sponsors,

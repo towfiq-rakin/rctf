@@ -13,6 +13,7 @@
     IconGear,
     IconGlobeHemisphereWest,
     IconHouse,
+    IconInfo,
     IconMenu2,
     IconSignIn,
     IconSignOut,
@@ -63,6 +64,13 @@
         activePath: '/',
         label: 'Home',
         icon: IconHouse,
+        show: true,
+      },
+      {
+        href: '/info',
+        activePath: '/info',
+        label: 'Rules & Info',
+        icon: IconInfo,
         show: true,
       },
       {

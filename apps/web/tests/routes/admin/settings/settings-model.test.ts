@@ -23,6 +23,7 @@ function cleanState(): SettingsFormState {
     timing: { startTime: null, endTime: null, dirty: false },
     logo: { light: '', dark: '', dirty: false },
     homeContent: { value: '', dirty: false },
+    rulesContent: { value: '', dirty: false },
     meta: { description: '', imageUrl: '', dirty: false },
     sponsors: { list: [], dirty: false },
   }
@@ -51,6 +52,14 @@ describe('buildPatch', () => {
     const state = cleanState()
     state.ctfName = { value: 'rCTF', dirty: true }
     expect(buildPatch(state, { ctfName: 'rCTF' })).toEqual({ ctfName: null })
+  })
+
+  it('sends edited rules content', () => {
+    const state = cleanState()
+    state.rulesContent = { value: '# Event rules', dirty: true }
+    expect(buildPatch(state, { rulesContent: '# Default rules' })).toEqual({
+      rulesContent: '# Event rules',
+    })
   })
 
   it('assembles a mixed patch of edits, resets, and untouched fields', () => {
@@ -328,6 +337,7 @@ describe('reset builders', () => {
     startTime: 1000,
     endTime: 2000,
     homeContent: '# Welcome',
+    rulesContent: '# Rules',
     logoLightUrl: '/light.png',
     logoDarkUrl: '/dark.png',
     meta: { description: 'A CTF.', imageUrl: '/og.png' },
@@ -388,6 +398,17 @@ describe('reset builders', () => {
       dirty: true,
     })
     expect(resetGroup({}, 'homeContent')).toEqual({ value: '', dirty: true })
+  })
+
+  it('resets rules content to the default, falling back to empty', () => {
+    expect(resetGroup(defaults, 'rulesContent')).toEqual({
+      value: '# Rules',
+      dirty: true,
+    })
+    expect(resetGroup({}, 'rulesContent')).toEqual({
+      value: '',
+      dirty: true,
+    })
   })
 
   it('resets meta to defaults, falling back to empty strings', () => {
@@ -477,6 +498,7 @@ describe('groupMatchesDefaults', () => {
     const state = cleanState()
     expect(groupMatchesDefaults(state, 'faviconUrl', defaults)).toBe(true)
     expect(groupMatchesDefaults(state, 'homeContent', {})).toBe(true)
+    expect(groupMatchesDefaults(state, 'rulesContent', {})).toBe(true)
   })
 
   it('requires both timing values to match', () => {

@@ -152,6 +152,7 @@ describe('admin settings', () => {
       const body = await expectResponse(res, GoodAdminSettings)
       expect(body.data.defaults.ctfName).toBe(config.ctfName)
       expect(body.data.defaults.homeContent).toBe(config.homeContent)
+      expect(body.data.defaults.rulesContent).toBe(config.rulesContent)
       expect(body.data.defaults.startTime).toBe(config.startTime)
       expect(body.data.defaults.endTime).toBe(config.endTime)
       expect(body.data.defaults.faviconUrl).toBe(config.faviconUrl)
@@ -223,6 +224,16 @@ describe('admin settings', () => {
       })
       const body = await expectResponse(res, GoodAdminSettingsUpdate)
       expect(body.data.overrides.homeContent).toBe('# Custom Home')
+    })
+
+    test('sets rulesContent override', async () => {
+      const res = await request(app, '/api/v2/admin/settings', {
+        method: 'PUT',
+        headers: await jsonHeaders(settingsAdmin.user.id),
+        body: JSON.stringify({ data: { rulesContent: '# Custom Rules' } }),
+      })
+      const body = await expectResponse(res, GoodAdminSettingsUpdate)
+      expect(body.data.overrides.rulesContent).toBe('# Custom Rules')
     })
 
     test('sets competition timing overrides', async () => {
@@ -650,6 +661,7 @@ describe('admin settings', () => {
       const body = await expectResponse(res, GoodClientConfigV2)
       expect(body.data.ctfName).toBe(config.ctfName)
       expect(body.data.homeContent).toBe(config.homeContent)
+      expect(body.data.rulesContent).toBe(config.rulesContent)
       expect(body.data.divisions).toEqual(config.divisions)
       expect(body.data.challengesRequireAuth).toBe(config.challengesRequireAuth)
     })
@@ -680,6 +692,20 @@ describe('admin settings', () => {
       })
       const body = await expectResponse(res, GoodClientConfigV2)
       expect(body.data.homeContent).toBe('# Override Home')
+    })
+
+    test('v2 client config uses DB overrides for rulesContent', async () => {
+      await request(app, '/api/v2/admin/settings', {
+        method: 'PUT',
+        headers: await jsonHeaders(settingsAdmin.user.id),
+        body: JSON.stringify({ data: { rulesContent: '# Override Rules' } }),
+      })
+
+      const res = await request(app, '/api/v2/integrations/client/config', {
+        method: 'GET',
+      })
+      const body = await expectResponse(res, GoodClientConfigV2)
+      expect(body.data.rulesContent).toBe('# Override Rules')
     })
 
     test('v2 client config uses DB overrides for competition timing', async () => {

@@ -51,6 +51,7 @@ rCTF requires [Bun v1.0+](https://bun.sh/).
      description: 'Example rCTF instance'
      imageUrl: 'https://example.com'
    homeContent: "A description of your CTF. Markdown supported.\n\n<timer></timer>"
+   rulesContent: "# Rules and Info\n\nAdd your competition rules here."
 
    origin: http://127.0.0.1:5173
    divisions:

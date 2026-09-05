@@ -19,6 +19,9 @@ export const GoodClientConfigV2 = response('goodClientConfigV2', {
     homeContent: example(z.string(), '# Welcome').check(
       z.describe('Markdown content shown on the home page.')
     ),
+    rulesContent: example(z.string(), '# Rules').check(
+      z.describe('Markdown content shown on the rules and information page.')
+    ),
     sponsors: z.array(SponsorSchemaV2),
     flagFormatPlaceholder: example(z.string(), 'rctf{...}').check(
       z.describe('Placeholder shown in the flag submission box.')

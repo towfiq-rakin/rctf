@@ -126,6 +126,11 @@
     form.homeContent = resetGroup(defaults, 'homeContent')
   }
 
+  function resetRules() {
+    if (!form || !defaults) return
+    form.rulesContent = resetGroup(defaults, 'rulesContent')
+  }
+
   function resetMeta() {
     if (!form || !defaults) return
     form.meta = resetGroup(defaults, 'meta')
@@ -384,6 +389,21 @@
             oninput={value => {
               settingsForm.homeContent.value = value
               markGroup('homeContent')
+            }}
+          />
+        </group-body>
+      </settings-group>
+
+      <settings-group>
+        {@render groupHeader('Rules and info', resetRules)}
+        <group-body>
+          <MarkdownEditor
+            value={settingsForm.rulesContent.value}
+            label="Rules and info content"
+            placeholder="Markdown content for the rules and information page..."
+            oninput={value => {
+              settingsForm.rulesContent.value = value
+              markGroup('rulesContent')
             }}
           />
         </group-body>

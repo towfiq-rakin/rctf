@@ -129,6 +129,7 @@ export const loadEnvConfig = (): ConfigLayer => {
     ['ctftime', ctftime],
     ['userMembers', getEnvBoolean('RCTF_USER_MEMBERS')],
     ['homeContent', getEnvString('RCTF_HOME_CONTENT')],
+    ['rulesContent', getEnvString('RCTF_RULES_CONTENT')],
     ['ctfName', getEnvString('RCTF_NAME')],
     ['meta', meta],
     ['faviconUrl', getEnvString('RCTF_FAVICON_URL')],

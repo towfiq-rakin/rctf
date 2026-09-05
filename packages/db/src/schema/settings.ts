@@ -12,6 +12,7 @@ export interface EditableSponsor {
 export interface EditableSettings {
   ctfName?: string
   homeContent?: string
+  rulesContent?: string
   startTime?: number
   endTime?: number
   sponsors?: EditableSponsor[]

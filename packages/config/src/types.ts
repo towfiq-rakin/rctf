@@ -145,6 +145,10 @@ export const ServerConfigSchema = z.object({
 
   // UI
   homeContent: z._default(z.string(), 'Home content. Markdown supported.'),
+  rulesContent: z._default(
+    z.string(),
+    'Rules and information. Markdown supported.'
+  ),
   sponsors: z._default(z.array(SponsorSchema), []),
   meta: z.prefault(
     z.object({
