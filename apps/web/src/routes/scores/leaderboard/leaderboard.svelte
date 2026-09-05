@@ -571,10 +571,18 @@
     position: relative;
     inline-size: 100%;
     contain: layout style;
+    background-color: color-mix(
+      in srgb,
+      var(--background-l1) 65%,
+      transparent
+    );
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    backdrop-filter: blur(16px) saturate(180%);
     /* not one huge repeating-linear-gradient because firefox misrenders giant gradient primitives??? */
     background-image: linear-gradient(
       to bottom,
-      var(--background-l2) 0 var(--score-row-height),
+      color-mix(in srgb, var(--background-l1) 35%, transparent) 0
+        var(--score-row-height),
       transparent var(--score-row-height)
     );
     background-size: 100% var(--score-row-height-full);
@@ -588,7 +596,7 @@
     inline-size: 100%;
     block-size: var(--score-row-height-full);
     contain: layout style paint;
-    background: var(--background-l0);
+    background: transparent;
 
     &:has(:global(a:focus-visible))::after {
       content: '';
@@ -632,7 +640,7 @@
     inline-size: var(--score-team-column-width);
     block-size: var(--score-row-height);
     padding-inline: 1rem;
-    background: var(--background-l0);
+    background: transparent;
 
     &::before,
     &::after {
@@ -644,15 +652,15 @@
     }
 
     &::before {
-      background: var(--background-l2);
+      background: color-mix(in srgb, var(--background-l1) 65%, transparent);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
+      backdrop-filter: blur(16px) saturate(180%);
+      border: 1px solid
+        light-dark(rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.08));
     }
 
     &[data-hovered]::before {
-      background: color-mix(
-        in oklab,
-        var(--foreground-l0) 4%,
-        var(--background-l2)
-      );
+      background: color-mix(in srgb, var(--background-l1) 75%, transparent);
     }
 
     &[data-ranked]::after {
@@ -685,7 +693,11 @@
     }
 
     &[data-current]::before {
-      background: var(--background-self-l0);
+      background: color-mix(
+        in srgb,
+        var(--background-self-l0) 65%,
+        transparent
+      );
     }
   }
 
@@ -801,20 +813,29 @@
       flex-shrink: 0;
       inline-size: var(--score-content-width);
       block-size: var(--score-row-height);
-      background: var(--background-l2);
+      background: color-mix(in srgb, var(--background-l1) 65%, transparent);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
+      backdrop-filter: blur(16px) saturate(180%);
+      border: 1px solid
+        light-dark(rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.08));
+      border-inline-start: 0;
       border-start-end-radius: var(--radius-lg);
       border-end-end-radius: var(--radius-lg);
 
       &[data-hovered] {
         background: color-mix(
-          in oklab,
-          var(--foreground-l0) 4%,
-          var(--background-l2)
+          in srgb,
+          var(--background-l1) 75%,
+          transparent
         );
       }
 
       &[data-current] {
-        background: var(--background-self-l0);
+        background: color-mix(
+          in srgb,
+          var(--background-self-l0) 65%,
+          transparent
+        );
       }
     }
   }

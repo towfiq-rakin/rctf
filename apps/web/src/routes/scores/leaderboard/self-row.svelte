@@ -81,7 +81,7 @@
     display: flex;
     block-size: var(--score-row-height-full);
     padding-block-end: var(--score-row-gap);
-    background: var(--background-l0);
+    background: transparent;
     contain: layout style;
     pointer-events: auto;
 
@@ -113,7 +113,7 @@
     inline-size: var(--score-team-column-width);
     block-size: var(--score-row-height);
     padding-inline: 1rem;
-    background: var(--background-l0);
+    background: transparent;
 
     &::before,
     &::after {
@@ -125,7 +125,15 @@
     }
 
     &::before {
-      background: var(--background-self-l0);
+      background: color-mix(
+        in srgb,
+        var(--background-self-l0) 65%,
+        transparent
+      );
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
+      backdrop-filter: blur(16px) saturate(180%);
+      border: 1px solid
+        light-dark(rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.08));
     }
 
     &::after {
@@ -171,7 +179,16 @@
       flex-shrink: 0;
       inline-size: var(--score-content-width);
       block-size: var(--score-row-height);
-      background: var(--background-self-l0);
+      background: color-mix(
+        in srgb,
+        var(--background-self-l0) 65%,
+        transparent
+      );
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
+      backdrop-filter: blur(16px) saturate(180%);
+      border: 1px solid
+        light-dark(rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.08));
+      border-inline-start: 0;
       border-start-end-radius: var(--radius-lg);
       border-end-end-radius: var(--radius-lg);
     }
