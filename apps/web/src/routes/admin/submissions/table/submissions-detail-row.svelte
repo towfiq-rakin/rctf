@@ -32,6 +32,14 @@
         </detail-pill>
       {/each}
     {/if}
+    {#if submission.sharedIpTeams.length > 0}
+      <pill-label>Shared IP with</pill-label>
+      {#each submission.sharedIpTeams as team (team.id)}
+        <detail-pill title={team.name}>
+          <a href="/admin/profile/{team.id}"><code>{team.name}</code></a>
+        </detail-pill>
+      {/each}
+    {/if}
   </detail-pills>
   <button type="button" aria-label="Close submitted details" onclick={onClose}>
     <IconX aria-hidden="true" />
@@ -62,6 +70,7 @@
     display: flex;
     min-inline-size: 0;
     flex: 1;
+    align-items: center;
     gap: var(--space-3xs);
     overflow-x: auto;
     overscroll-behavior: none;

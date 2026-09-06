@@ -52,6 +52,13 @@ export const GoodAdminSubmissions = response('goodAdminSubmissions', {
         ip: example(z.string(), '203.0.113.7').check(
           z.describe('Source IP of the submission.')
         ),
+        sharedIpTeams: z
+          .array(z.object({ id: z.string(), name: z.string() }))
+          .check(
+            z.describe(
+              'Other teams with the exact same source IP across all recorded submissions, independent of filters and pagination. Sorted by name then ID; deleted team names fall back to their IDs. Empty for unshared, blank, or unknown IPs.'
+            )
+          ),
         result: example(z.enum(SubmissionResult), 'correct').check(
           z.describe('Outcome of the submission.')
         ),

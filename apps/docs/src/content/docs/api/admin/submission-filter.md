@@ -72,3 +72,5 @@ Filter objects can include nullable `include` and `exclude` arrays. Date filters
 ::request-body{def="FilterAdminSubmissionsRouteV2" title="Request body"}
 
 ::response-body{def="FilterAdminSubmissionsRouteV2" response="goodAdminSubmissions" title="Response fields"}
+
+Each row includes `sharedIpTeams`, an array of other teams' `id` and `name` values that used the exact same IP across all recorded flag and admin bot submissions. This lookup ignores filters and pagination, excludes the submitting team, and deduplicates by team ID. Teams are sorted by name then ID, with deleted teams' IDs used as their names. Blank and `unknown` IPs return an empty array.

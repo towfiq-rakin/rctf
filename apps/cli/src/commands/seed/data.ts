@@ -747,6 +747,30 @@ const buildSubmissions = (
     }
   }
 
+  // Keep a shared-IP example above the randomized history in the admin table.
+  if (teams.length >= 2) {
+    for (const [index, team] of teams.slice(0, 3).entries()) {
+      const isBot = index === 2
+      submissions.push({
+        ...base(),
+        kind: isBot ? SubmissionKind.ADMIN_BOT : SubmissionKind.FLAG,
+        challengeId: isBot ? ADMIN_BOT_CHALLENGE_ID : challenges[0]!.id,
+        userId: team.id,
+        ip: '203.0.113.42',
+        result: isBot ? SubmissionResult.QUEUED : SubmissionResult.INCORRECT,
+        details: isBot
+          ? {
+              configRevision: '1',
+              inputs: { url: 'https://example.com/shared-ip-demo' },
+            }
+          : { submittedFlag: 'rctf{shared_ip_demo_wrong_flag}' },
+        createdAt: new Date(
+          timing.startTime + DAY + (index + 1) * 1000
+        ).toISOString(),
+      })
+    }
+  }
+
   return submissions
 }
 

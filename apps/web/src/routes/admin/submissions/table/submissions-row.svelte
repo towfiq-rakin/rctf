@@ -22,6 +22,11 @@
 
   let { submission, index, expanded, ctfStartTime, onToggle }: Props = $props()
 
+  const sharedIpLabel = $derived(
+    submission.sharedIpTeams.length > 0
+      ? `Shared IP with ${submission.sharedIpTeams.length} other team${submission.sharedIpTeams.length === 1 ? '' : 's'}. Expand for team details.`
+      : undefined
+  )
   const category = $derived(getCategoryConfig(submission.challengeCategory))
   const timestamp = $derived(new Date(submission.createdAt).getTime())
   const ctfOffset = $derived(formatCtfOffset(timestamp, ctfStartTime))
@@ -99,9 +104,17 @@
         target="_blank"
         rel="noreferrer"
         data-ip
+        data-shared={sharedIpLabel ? true : undefined}
+        title={sharedIpLabel}
+        aria-label={sharedIpLabel
+          ? `${submission.ip}. ${sharedIpLabel}`
+          : undefined}
         onclick={event => event.stopPropagation()}
       >
         <code>{submission.ip}</code>
+        {#if sharedIpLabel}
+          <span data-sharing aria-hidden="true"></span>
+        {/if}
       </a>
     {:else}
       <code data-ip data-inert>{submission.ip}</code>
@@ -278,14 +291,39 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 
+    &[data-shared] {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-3xs);
+      color: var(--foreground-yellow-l1);
+      background: var(--background-yellow-l0);
+
+      code {
+        min-inline-size: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      &:hover {
+        color: var(--foreground-yellow-l0);
+      }
+    }
+
     &[data-inert] {
       color: var(--foreground-l3);
     }
 
     &:not([data-inert]):hover {
-      color: var(--foreground-l1);
       text-decoration: underline;
+
+      &:not([data-shared]) {
+        color: var(--foreground-l1);
+      }
     }
+  }
+
+  [data-sharing] {
+    flex-shrink: 0;
   }
 
   kind-badge {

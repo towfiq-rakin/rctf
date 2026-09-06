@@ -13,7 +13,18 @@ import {
   SubmissionSortOrder,
   SubmissionTeamStatus,
 } from '@rctf/types'
-import { and, asc, count, desc, eq, gte, lte, sql, type SQL } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  inArray,
+  lte,
+  sql,
+  type SQL,
+} from 'drizzle-orm'
 import { alias, type PgColumn } from 'drizzle-orm/pg-core'
 import { setFilter } from '../lib/db-filters'
 
@@ -123,6 +134,7 @@ export type AdminSubmissionInfo = {
   userStatusText: string | null
   userBanned: boolean
   ip: string
+  sharedIpTeams: { id: string; name: string }[]
   result: SubmissionResult
   cheatedFromId: string | null
   cheatedFromName: string | null
@@ -176,7 +188,40 @@ export const getSubmissions = async (
       .offset(params.offset),
   ])
 
-  return { total: countResult[0]?.count ?? 0, submissions: rows }
+  const ips = [...new Set(rows.map(row => row.ip))].filter(
+    ip => ip.trim() !== '' && ip !== 'unknown'
+  )
+  const teamsByIp = new Map<string, { id: string; name: string }[]>()
+  if (ips.length > 0) {
+    const matches = await db
+      .selectDistinct({
+        ip: submissions.ip,
+        id: submissions.userId,
+        name: sql<string>`coalesce(${users.name}::text, ${submissions.userId})`,
+      })
+      .from(submissions)
+      .leftJoin(users, eq(users.id, submissions.userId))
+      .where(inArray(submissions.ip, ips))
+
+    matches.sort(
+      (a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id)
+    )
+    for (const { ip, id, name } of matches) {
+      const teams = teamsByIp.get(ip) ?? []
+      teams.push({ id, name })
+      teamsByIp.set(ip, teams)
+    }
+  }
+
+  return {
+    total: countResult[0]?.count ?? 0,
+    submissions: rows.map(row => ({
+      ...row,
+      sharedIpTeams: (teamsByIp.get(row.ip) ?? []).filter(
+        team => team.id !== row.userId
+      ),
+    })),
+  }
 }
 
 function isBannedStatus(status: SubmissionTeamStatus) {

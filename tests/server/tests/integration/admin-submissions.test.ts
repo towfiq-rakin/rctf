@@ -60,6 +60,127 @@ const filterSubmissions = (
   })
 
 describe('admin submissions', () => {
+  for (const method of ['GET', 'POST'] as const) {
+    test(`${method} finds shared IP teams across all history, independently of filters and pagination`, async () => {
+      const db = getDb()
+      const { token } = await adminAuth()
+      const alpha = await generateRealTestUser()
+      const beta = await generateRealTestUser()
+      const deleted = await generateRealTestUser()
+      await db
+        .update(users)
+        .set({ name: 'Alpha Team' })
+        .where(eq(users.id, alpha.user.id))
+      await db
+        .update(users)
+        .set({ name: 'Beta Team', banned: true })
+        .where(eq(users.id, beta.user.id))
+
+      const insert = async (
+        userId: string,
+        ip: string,
+        result = SubmissionResult.INCORRECT,
+        kind = SubmissionKind.FLAG,
+        createdAt = '2026-05-05T10:00:00.000Z'
+      ) => {
+        const id = crypto.randomUUID()
+        await db.insert(submissions).values({
+          id,
+          userId,
+          ip,
+          result,
+          kind,
+          challengeId: 'history',
+          createdAt,
+        })
+        return id
+      }
+      const sharedIp = '203.0.113.7'
+      for (const result of Object.values(SubmissionResult)) {
+        await insert(beta.user.id, sharedIp, result, SubmissionKind.ADMIN_BOT)
+      }
+      await insert(deleted.user.id, sharedIp)
+      await db.delete(users).where(eq(users.id, deleted.user.id))
+      const latestId = await insert(
+        alpha.user.id,
+        sharedIp,
+        SubmissionResult.CORRECT,
+        SubmissionKind.FLAG,
+        '2026-05-06T10:00:00.000Z'
+      )
+      await insert(alpha.user.id, sharedIp)
+      for (const ip of ['unknown', '', '   ', '203.0.113.8', '2001:db8::1']) {
+        await insert(alpha.user.id, ip)
+        await insert(alpha.user.id, ip)
+      }
+      for (const ip of ['unknown', '', '   ', '2001:db8::1']) {
+        await insert(beta.user.id, ip)
+      }
+      await insert(beta.user.id, '2001:0db8::1')
+
+      const fetchRows = async (
+        query: string,
+        body: Record<string, unknown> = {}
+      ) =>
+        expectResponse(
+          await request(app, `/api/v2/admin/submissions?${query}`, {
+            method,
+            headers: {
+              Authorization: `Bearer ${token}`,
+              ...(method === 'POST'
+                ? { 'Content-Type': 'application/json' }
+                : {}),
+            },
+            ...(method === 'POST' ? { body: JSON.stringify(body) } : {}),
+          }),
+          GoodAdminSubmissions
+        )
+
+      const expected = [
+        { id: beta.user.id, name: 'Beta Team' },
+        { id: deleted.user.id, name: deleted.user.id },
+      ].sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id))
+      const page = await fetchRows(
+        'limit=1&offset=0&teamSearch=Alpha&sortOrder=desc',
+        {
+          team: { include: [alpha.user.id] },
+          kind: { include: [SubmissionKind.FLAG] },
+          result: { include: [SubmissionResult.CORRECT] },
+          teamStatus: { include: [SubmissionTeamStatus.NOT_BANNED] },
+          createdAfter: '2026-05-06T00:00:00.000Z',
+        }
+      )
+      expect(page.data.submissions).toHaveLength(1)
+      expect(page.data.submissions[0]).toMatchObject({
+        id: latestId,
+        sharedIpTeams: expected,
+      })
+
+      const all = await fetchRows('limit=100&offset=0')
+      for (const row of all.data.submissions) {
+        if (row.ip === sharedIp) {
+          const teams = [{ id: alpha.user.id, name: 'Alpha Team' }, ...expected]
+            .filter(team => team.id !== row.userId)
+            .sort(
+              (a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id)
+            )
+          expect(row.sharedIpTeams).toEqual(teams)
+        } else if (row.ip === '2001:db8::1') {
+          expect(row.sharedIpTeams).toEqual(
+            row.userId === alpha.user.id
+              ? [{ id: beta.user.id, name: 'Beta Team' }]
+              : [{ id: alpha.user.id, name: 'Alpha Team' }]
+          )
+        } else {
+          expect(row.sharedIpTeams).toEqual([])
+        }
+      }
+      const empty = await fetchRows('limit=1&offset=1000')
+      expect(empty.data.submissions).toEqual([])
+      expect(empty.data.total).toBe(all.data.total)
+    })
+  }
+
   test('records flag submission IPs and returns them sortable by team', async () => {
     const db = getDb()
     const { admin } = await adminAuth()

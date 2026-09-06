@@ -35,6 +35,7 @@ function submissionWith(overrides: Partial<Submission>): Submission {
     userStatusText: null,
     userBanned: false,
     ip: '203.0.113.7',
+    sharedIpTeams: [],
     result: SubmissionResult.CORRECT,
     cheatedFromId: null,
     cheatedFromName: null,

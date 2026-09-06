@@ -59,6 +59,7 @@ export type Submission = {
   userStatusText: string | null
   userBanned: boolean
   ip: string
+  sharedIpTeams: { id: string; name: string }[]
   result: SubmissionResult
   cheatedFromId: string | null
   cheatedFromName: string | null
