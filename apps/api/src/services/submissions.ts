@@ -1,3 +1,4 @@
+import { config } from '@rctf/config'
 import type { DatabaseClient, SubmissionDetails } from '@rctf/db'
 import { challenges, submissions, users } from '@rctf/db'
 import type {
@@ -187,6 +188,13 @@ export const getSubmissions = async (
       .limit(params.limit)
       .offset(params.offset),
   ])
+
+  if (!config.sharedIpWarning) {
+    return {
+      total: countResult[0]?.count ?? 0,
+      submissions: rows.map(row => ({ ...row, sharedIpTeams: [] })),
+    }
+  }
 
   const ips = [...new Set(rows.map(row => row.ip))].filter(
     ip => ip.trim() !== '' && ip !== 'unknown'

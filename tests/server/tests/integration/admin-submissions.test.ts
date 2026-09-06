@@ -11,7 +11,7 @@ import {
   SubmissionResult,
   SubmissionTeamStatus,
 } from '@rctf/types'
-import { beforeAll, beforeEach, describe, expect, test } from 'bun:test'
+import { beforeAll, beforeEach, describe, expect, spyOn, test } from 'bun:test'
 import { eq } from 'drizzle-orm'
 import type { Hono } from 'hono'
 import { getFlagsForTeam } from '../../../../apps/api/src/providers/flags'
@@ -60,6 +60,53 @@ const filterSubmissions = (
   })
 
 describe('admin submissions', () => {
+  test('disabled sharedIpWarning skips the lookup for GET and POST', async () => {
+    const db = getDb()
+    const { token } = await adminAuth()
+    await db.insert(submissions).values(
+      ['first-team', 'second-team'].map(userId => ({
+        id: crypto.randomUUID(),
+        userId,
+        challengeId: 'shared-ip-test',
+        ip: '203.0.113.42',
+        kind: SubmissionKind.FLAG,
+        result: SubmissionResult.INCORRECT,
+      }))
+    )
+    const prior = config.sharedIpWarning
+    const lookup = spyOn(db, 'selectDistinct')
+    try {
+      config.sharedIpWarning = false
+      for (const method of ['GET', 'POST']) {
+        const res = await request(
+          app,
+          '/api/v2/admin/submissions?limit=10&offset=0',
+          {
+            method,
+            headers: {
+              Authorization: `Bearer ${token}`,
+              ...(method === 'POST'
+                ? { 'Content-Type': 'application/json' }
+                : {}),
+            },
+            ...(method === 'POST' ? { body: '{}' } : {}),
+          }
+        )
+        const body = await expectResponse(res, GoodAdminSubmissions)
+        expect(body.data.total).toBe(2)
+        expect(body.data.submissions).toHaveLength(2)
+        for (const row of body.data.submissions) {
+          expect(row.ip).toBe('203.0.113.42')
+          expect(row.sharedIpTeams).toEqual([])
+        }
+      }
+      expect(lookup).not.toHaveBeenCalled()
+    } finally {
+      config.sharedIpWarning = prior
+      lookup.mockRestore()
+    }
+  })
+
   for (const method of ['GET', 'POST'] as const) {
     test(`${method} finds shared IP teams across all history, independently of filters and pagination`, async () => {
       const db = getDb()

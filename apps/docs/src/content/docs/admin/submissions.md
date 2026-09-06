@@ -24,6 +24,8 @@ Each solve records the submitter's IP address. The submissions table also record
 
 Shared IP addresses have a yellow badge marked “shared”. Expand the submission row to see “Shared IP with” and links to the other teams' admin profiles. Matches include all recorded flag attempts and admin bot submissions, even those outside the current filters or page. Sharing an address is informational and can happen when teams use the same university network; it does not mark a submission as cheating.
 
+Set `sharedIpWarning: false` in your YAML configuration to skip shared-IP detection and hide sharing warnings and team details. It defaults to `true`; IP recording and rate limits are unaffected.
+
 ## First bloods
 
 The first three solves, ordered by timestamp, are first, second, and third blood. A configured [blood bot](/integrations/bloodbot) announces them automatically.

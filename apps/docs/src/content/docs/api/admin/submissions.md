@@ -31,4 +31,4 @@ Query parameters control pagination, sorting, and lightweight challenge or team 
 
 Each row includes challenge metadata, team metadata, the source IP address, result details, and creation time.
 
-Each row includes `sharedIpTeams`, an array of other teams' `id` and `name` values that used the exact same IP across all recorded flag and admin bot submissions. This lookup ignores filters and pagination, excludes the submitting team, and deduplicates by team ID. Teams are sorted by name then ID, with deleted teams' IDs used as their names. Blank and `unknown` IPs return an empty array.
+Each row includes `sharedIpTeams`, an array of other teams' `id` and `name` values that used the exact same IP across all recorded flag and admin bot submissions. This lookup ignores filters and pagination, excludes the submitting team, and deduplicates by team ID. Teams are sorted by name then ID, with deleted teams' IDs used as their names. Blank and `unknown` IPs return an empty array. When `sharedIpWarning: false` is configured, the lookup is skipped and every row returns an empty array.

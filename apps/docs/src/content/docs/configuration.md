@@ -462,6 +462,12 @@ leaderboard:
 
 ### Moderation
 
+`sharedIpWarning` defaults to `true`. Set it to `false` for events where shared networks are expected. This skips shared-IP detection for admin submissions and hides the shared-IP badge and team details. Submission IPs are still recorded and displayed; rate limits are unchanged.
+
+```yaml
+sharedIpWarning: false
+```
+
 ```yaml
 avatarsModeration:
   provider:

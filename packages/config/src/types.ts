@@ -191,6 +191,7 @@ export const ServerConfigSchema = z.object({
   ),
 
   // Moderation
+  sharedIpWarning: z._default(z.boolean(), true),
   avatarsModeration: z.optional(
     z.object({
       provider: ProviderConfigSchema,
