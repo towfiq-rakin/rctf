@@ -10,7 +10,7 @@
   import '../styles/reveal.css'
   import '../styles/theme-visibility.css'
   import { QueryClientProvider } from '@tanstack/svelte-query'
-  import favicon from '$lib/assets/favicon.svg'
+  import favicon from '$lib/assets/favicon.ico'
   import Brainrot from '$lib/components/brainrot.svelte'
   import Navigation from '$lib/components/navigation.svelte'
   import RootEdgeFades from '$lib/components/root-edge-fades.svelte'
