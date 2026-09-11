@@ -1,5 +1,6 @@
 import { config } from '@rctf/config'
 import {
+  challengeFileDownloads,
   challenges,
   createDatabase,
   externalAuthClients,
@@ -22,6 +23,7 @@ export const clearDatabase = async () => {
   const db = getDb()
   await db.delete(pendingUserVerifications)
   await db.delete(submissions)
+  await db.delete(challengeFileDownloads)
   await db.delete(solves)
   await db.delete(challenges)
   await db.delete(externalAuthClients)
@@ -97,6 +99,7 @@ export const generateChallenge = async () => {
     challenge: { id, ...data, flag },
     cleanup: async () => {
       await db.delete(submissions).where(eq(submissions.challengeId, id))
+      await db.delete(challengeFileDownloads).where(eq(challengeFileDownloads.challengeId, id))
       await db.delete(solves).where(eq(solves.challengeid, id))
       await db.delete(challenges).where(eq(challenges.id, id))
     },
@@ -131,6 +134,7 @@ export const generateChallengeWithReleaseTime = async (
     challenge: { id, ...data, flag },
     cleanup: async () => {
       await db.delete(submissions).where(eq(submissions.challengeId, id))
+      await db.delete(challengeFileDownloads).where(eq(challengeFileDownloads.challengeId, id))
       await db.delete(solves).where(eq(solves.challengeid, id))
       await db.delete(challenges).where(eq(challenges.id, id))
     },

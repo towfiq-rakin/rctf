@@ -1,5 +1,9 @@
 <script lang="ts">
-  import type { Challenge } from '@rctf/types'
+  import {
+    RecordChallengeFileDownloadRouteV2,
+    type Challenge,
+  } from '@rctf/types'
+  import { apiRequest } from '$lib/api'
   import Markdown from '$lib/components/markdown.svelte'
   import { IconDownload, IconFiles } from '$lib/icons'
   import { toast } from '$lib/toast'
@@ -22,8 +26,25 @@
   let downloading = $state(false)
   let cancelDownload: (() => void) | null = null
 
-  function handleDownloadAll() {
+  function recordFileDownload(): void {
+    void apiRequest(RecordChallengeFileDownloadRouteV2, {
+      id: challenge.id,
+    }).catch(() => {
+      // Do not stop the actual download just because telemetry failed.
+    })
+  }
+
+  async function handleDownloadAll() {
     downloading = true
+
+    try {
+      await apiRequest(RecordChallengeFileDownloadRouteV2, {
+        id: challenge.id,
+      })
+    } catch {
+      // telemetry failure shouldn't prevent downloading
+    }
+
     cancelDownload = downloadAll(challenge.files, {
       onDone: () => (downloading = false),
       onError: name => toast.error(`Couldn't start the download for ${name}`),
@@ -44,7 +65,12 @@
         <files-box>
           <file-list tabindex="-1">
             {#each challenge.files as file (file.url)}
-              <a href={file.url} target="_blank" rel="noopener noreferrer">
+              <a
+                href={file.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onclick={recordFileDownload}
+              >
                 <IconFiles data-slot="icon" />
                 <file-meta>
                   <span data-slot="name">{file.name}</span>

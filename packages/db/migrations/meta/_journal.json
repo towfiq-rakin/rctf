@@ -204,6 +204,13 @@
       "when": 1785168511601,
       "tag": "0028_dynamic_flags",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1785200000000,
+      "tag": "0029_challenge_file_downloads",
+      "breakpoints": true
     }
   ]
 }

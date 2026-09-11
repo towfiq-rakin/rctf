@@ -8,6 +8,7 @@ import {
   BadReplayedRequest,
   BadSignature,
   BadToken,
+  GoodChallengeFileDownload,
   GoodChallengeScoresV2,
   GoodChallengeSolvesV2,
   GoodChallengesV2,
@@ -91,3 +92,20 @@ export const GetChallengeScoresRouteV2 = defineRoute({
   onlyWhenStarted: true,
   onlyWhenStartedPermissionsBypass: Permissions.challsRead,
 })
+
+export const RecordChallengeFileDownloadRouteV2 = defineRoute({
+  path: '/v2/challs/:id/file-download',
+  method: 'POST',
+
+  goodResponses: [GoodChallengeFileDownload],
+  badResponses: [BadChallenge, BadNotStarted, BadToken],
+
+  authRequired: true,
+  onlyWhenStarted: true,
+  onlyWhenStartedPermissionsBypass: Permissions.challsRead,
+
+  params: z.object({
+    id: z.string().check(z.describe('Challenge ID.')),
+  }),
+})
+

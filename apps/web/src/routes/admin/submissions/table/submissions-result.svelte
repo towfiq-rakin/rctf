@@ -3,16 +3,27 @@
 
   type Props = {
     result: string
+    filesNotDownloaded?: boolean
   }
 
-  let { result }: Props = $props()
+  let { result, filesNotDownloaded = false }: Props = $props()
 
-  const tone = $derived(resultTone(result))
+  const tone = $derived(
+    filesNotDownloaded
+      ? 'warning'
+      : resultTone(result)
+  )
+
+  const label = $derived(
+    filesNotDownloaded
+      ? 'Files not downloaded'
+      : resultLabel(result)
+  )
 </script>
 
 <result-cell data-tone={tone}>
   <result-dot aria-hidden="true"></result-dot>
-  <span>{resultLabel(result)}</span>
+  <span>{label}</span>
 </result-cell>
 
 <style>

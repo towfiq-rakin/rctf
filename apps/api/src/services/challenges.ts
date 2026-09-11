@@ -8,6 +8,7 @@ import type {
   Solve,
 } from '@rctf/db'
 import {
+  challengeFileDownloads,
   challenges,
   dynamicFlags,
   scoreEvents,
@@ -330,6 +331,41 @@ export const getMaxSolveCount = async (
   return row?.max ?? 0
 }
 
+export const recordChallengeFileDownload = async (
+  db: DatabaseClient | DatabaseTx,
+  userId: string,
+  challengeId: string
+): Promise<void> => {
+  await db
+    .insert(challengeFileDownloads)
+    .values({
+      userId,
+      challengeId,
+    })
+    .onConflictDoNothing()
+}
+
+export const hasDownloadedChallengeFile = async (
+  db: DatabaseClient | DatabaseTx,
+  userId: string,
+  challengeId: string
+): Promise<boolean> => {
+  const rows = await db
+    .select({
+      userId: challengeFileDownloads.userId,
+    })
+    .from(challengeFileDownloads)
+    .where(
+      and(
+        eq(challengeFileDownloads.userId, userId),
+        eq(challengeFileDownloads.challengeId, challengeId)
+      )
+    )
+    .limit(1)
+
+  return rows.length !== 0
+}
+
 export const createSolveAndGetBloodNumber = async (
   db: DatabaseClient,
   params: {
@@ -351,9 +387,19 @@ export const createSolveAndGetBloodNumber = async (
     await lockChallenge(tx, params.challengeId)
 
     // re-check under the lock so a concurrent delete can't orphan this solve
-    if (!(await getPrivateChallenge(tx, params.challengeId))) {
+    const challenge = await getPrivateChallenge(tx, params.challengeId)
+    if (!challenge) {
       return null
     }
+
+    const hasFiles = challenge.data.files.length > 0
+    const filesDownloaded = hasFiles
+      ? await hasDownloadedChallengeFile(
+          tx,
+          params.userId,
+          params.challengeId
+        )
+      : null
 
     const priorSolveCount = await countNonBannedSolvesForChallenge(
       tx,
@@ -389,6 +435,7 @@ export const createSolveAndGetBloodNumber = async (
             }
           : {}),
         ...(params.cheatedFrom ? { cheatedFrom: params.cheatedFrom } : {}),
+        ...(hasFiles ? { filesDownloaded } : {}),
       },
       relatedId: solveId,
       createdAt: new Date().toISOString(),
@@ -528,6 +575,9 @@ export const deleteChallenge = async (
     await lockChallenge(tx, id)
     await tx.delete(solves).where(eq(solves.challengeid, id))
     await tx.delete(dynamicFlags).where(eq(dynamicFlags.challengeId, id))
+    await tx
+      .delete(challengeFileDownloads)
+      .where(eq(challengeFileDownloads.challengeId, id))
     await tx.delete(challenges).where(eq(challenges.id, id))
   })
 }

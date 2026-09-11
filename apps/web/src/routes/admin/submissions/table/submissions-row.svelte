@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { SubmissionKind } from '@rctf/types'
+  import { SubmissionKind, SubmissionResult } from '@rctf/types'
   import { IconCaretRight, IconFlagBannerFold, IconRobot } from '$lib/icons'
   import Avatar from '$lib/ui/avatar.svelte'
   import { getCategoryConfig } from '$lib/utils/categories'
@@ -133,7 +133,15 @@
   </row-cell>
 
   <row-cell data-col="result">
-    <SubmissionsResult result={submission.result} />
+    <SubmissionsResult
+      result={submission.result}
+      filesNotDownloaded={
+        submission.result === SubmissionResult.CORRECT &&
+        submission.details !== null &&
+        typeof submission.details === 'object' &&
+        (submission.details as Record<string, unknown>).filesDownloaded === false
+      }
+    />
   </row-cell>
 </submission-row>
 

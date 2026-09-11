@@ -31,6 +31,10 @@ export type ScoreEvent = InferInsertModel<typeof schema.scoreEvents>
 export type ExternalAuthClient = InferInsertModel<
   typeof schema.externalAuthClients
 >
+export type ChallengeFileDownload = InferInsertModel<
+  typeof schema.challengeFileDownloads
+>
+
 
 export type SqlConfig = z.infer<typeof SqlDatabaseSchema>
 

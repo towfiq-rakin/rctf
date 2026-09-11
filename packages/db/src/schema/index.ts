@@ -1,4 +1,5 @@
 export * from './admin-bot-jobs'
+export * from './challenge-file-downloads'
 export * from './challenges'
 export * from './dynamic-flags'
 export * from './external-auth-clients'
@@ -8,3 +9,4 @@ export * from './settings'
 export * from './submissions'
 export * from './solves'
 export * from './users'
+

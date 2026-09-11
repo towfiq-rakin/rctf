@@ -42,8 +42,10 @@ export * from './bad-flag'
 export * from './bad-not-started'
 export * from './good-challenge-solves'
 export * from './good-challenges'
+export * from './good-challenge-file-download'
 export * from './good-flag'
 export * from './good-flag-providers'
+
 
 // users
 export * from './bad-ctftime-no-exists'
