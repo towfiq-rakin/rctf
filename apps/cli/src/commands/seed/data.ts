@@ -7,6 +7,7 @@ import type { ServerConfig } from '@rctf/config'
 import type {
   Challenge,
   DynamicFlag,
+  ExternalAuthClient,
   ScoreEvent,
   Settings,
   Solve,
@@ -32,6 +33,7 @@ export type SeedData = {
   scoreEvents: ScoreEvent[]
   submissions: Submission[]
   dynamicFlags: DynamicFlag[]
+  externalAuthClient: ExternalAuthClient
   settings: Settings
 }
 
@@ -104,6 +106,13 @@ const KOTH_TICK_INTERVAL = 15 * 60_000
 const KOTH_MAX_POINTS = 880
 const KOTH_PAYOUT_EXPONENT = 1.1
 const KOTH_SCORING_DEPTH = 0.55
+export const EXTERNAL_APP_ID = 'seed-external-app'
+export const EXTERNAL_APP_CLIENT_SECRET =
+  'rjw8TxDq9lzG2YJxsQIANLhwMDOa7RgV2rVfUnT_kO8'
+export const EXTERNAL_APP_WEBHOOK_SECRET =
+  'Vt3c5nJpXq0L8sYbR2wKfH7mZdA4gUeT1oCiNxP6lBk'
+export const EXTERNAL_CHALLENGE_ID = 'seed-external-challenge'
+export const EXTERNAL_CHALLENGE_ID_WITH_SCORES = 'seed-external-challenge-1'
 
 const FAILED_FLAG_RESULTS = [
   SubmissionResult.INCORRECT,
@@ -195,6 +204,17 @@ function buildAdmin(): User {
   }
 }
 
+function buildExternalAuthClient(admin: User): ExternalAuthClient {
+  return {
+    id: EXTERNAL_APP_ID,
+    name: 'Seed External App',
+    redirectUri: 'http://localhost:13337/v1/ext/rctf/callback',
+    secretHash: Bun.password.hashSync(EXTERNAL_APP_CLIENT_SECRET),
+    createdAt: admin.createdAt,
+    createdBy: admin.id,
+  }
+}
+
 function buildTeams(config: ServerConfig): User[] {
   const divisions = Object.keys(config.divisions)
   if (divisions.length === 0) {
@@ -258,16 +278,21 @@ const makeChallenge = (
 })
 
 const buildChallenges = (): Challenge[] => {
+  const challenges: Challenge[] = []
+  const add = (id: string, data: Partial<Challenge['data']>) => {
+    challenges.push(makeChallenge(id, challenges.length, data))
+  }
+
   const categoryCounts = new Map<string, number>()
   const categories = shuffle(CATEGORIES)
 
-  const flags = Array.from({ length: FLAG_CHALLENGE_COUNT }, (_, index) => {
+  for (let index = 0; index < FLAG_CHALLENGE_COUNT; index++) {
     const category = categories[index] ?? randomItem(CATEGORIES)
     const ordinal = (categoryCounts.get(category) ?? 0) + 1
     categoryCounts.set(category, ordinal)
     const id = `seed-${category}-${ordinal}`
 
-    return makeChallenge(id, index, {
+    add(id, {
       name: `${capitalize(category)} ${ordinal}`,
       description: `Generated ${category} challenge ${ordinal}.`,
       category,
@@ -299,10 +324,10 @@ const buildChallenges = (): Challenge[] => {
           : []),
       ],
     })
-  })
+  }
 
-  const koths = KOTH_CHALLENGES.map((koth, index) =>
-    makeChallenge(koth.id, FLAG_CHALLENGE_COUNT + index, {
+  for (const [index, koth] of KOTH_CHALLENGES.entries()) {
+    add(koth.id, {
       name: `Koth ${index + 1}`,
       description: `Generated koth challenge ${index + 1}${
         koth.penalties ? ' with performance penalties' : ''
@@ -316,127 +341,128 @@ const buildChallenges = (): Challenge[] => {
         },
       },
     })
-  )
+  }
 
-  const ads = AD_CHALLENGES.map((ad, index) =>
-    makeChallenge(
-      ad.id,
-      FLAG_CHALLENGE_COUNT + KOTH_CHALLENGES.length + 2 + index,
+  add(INSTANCER_CHALLENGE_ID, {
+    name: 'Instancer Playground',
+    description:
+      'On-demand instanced challenge for exercising the instancer panel.',
+    category: 'web',
+    points: { min: 100, max: 500 },
+    flags: [
       {
-        name: `Ad ${index + 1}`,
-        description: `Generated attack/defense challenge ${index + 1}${
-          ad.penalties ? ' with performance penalties' : ''
-        }.`,
-        category: 'ad',
-        scoring: {
-          kind: ChallengeScoringKind.DYNAMIC,
-          source: {
-            transport: DynamicScoringTransport.WEBHOOK,
-            secret: `${ad.id}-webhook-secret`,
+        provider: 'flags/static',
+        config: { flag: 'rctf{instancer_playground}' },
+      },
+    ],
+    releaseTime: Date.now() - DAY,
+    instancerConfig: {
+      challengeIntegrationId: INSTANCER_CHALLENGE_ID,
+      instancer: 'docker',
+      config: {
+        services: {
+          app: {
+            image: 'traefik/whoami:latest',
+            environment: { CHALLENGE: INSTANCER_CHALLENGE_ID },
           },
         },
-      }
-    )
-  )
-
-  const playgrounds = [
-    makeChallenge(
-      INSTANCER_CHALLENGE_ID,
-      FLAG_CHALLENGE_COUNT + KOTH_CHALLENGES.length,
-      {
-        name: 'Instancer Playground',
-        description:
-          'On-demand instanced challenge for exercising the instancer panel.',
-        category: 'web',
-        points: { min: 100, max: 500 },
-        flags: [
-          {
-            provider: 'flags/static',
-            config: { flag: 'rctf{instancer_playground}' },
-          },
-        ],
-        releaseTime: Date.now() - DAY,
-        instancerConfig: {
-          challengeIntegrationId: INSTANCER_CHALLENGE_ID,
-          instancer: 'docker',
-          config: {
-            services: {
-              app: {
-                image: 'traefik/whoami:latest',
-                environment: { CHALLENGE: INSTANCER_CHALLENGE_ID },
-              },
-            },
-          },
-          expose: [
-            {
-              kind: ExposeKind.HTTP,
-              hostPrefix: 'instancer-playground-web',
-              containerName: 'app',
-              containerPort: 80,
-              shouldDisplay: true,
-              title: 'Web',
-            },
-            {
-              kind: ExposeKind.TCP,
-              hostPrefix: 'instancer-playground-nc',
-              containerName: 'app',
-              containerPort: 1337,
-              shouldDisplay: true,
-              title: 'Netcat',
-            },
-          ],
-          timeoutMilliseconds: 600_000,
-          extendable: true,
-        },
-      }
-    ),
-    makeChallenge(
-      ADMIN_BOT_CHALLENGE_ID,
-      FLAG_CHALLENGE_COUNT + KOTH_CHALLENGES.length + 1,
-      {
-        name: 'Admin Bot Playground',
-        description:
-          'Standalone admin-bot challenge for exercising the admin-bot panel.',
-        category: 'web',
-        points: { min: 100, max: 500 },
-        flags: [
-          {
-            provider: 'flags/static',
-            config: { flag: 'rctf{admin_bot_playground}' },
-          },
-        ],
-        releaseTime: Date.now() - DAY,
-        adminBotConfig: {
-          code: ADMIN_BOT_PLAYGROUND_CODE,
-          inputs: {
-            url: { pattern: '^https?://.+', flags: 'i' },
-          },
-          revision: '1',
-          timeoutMilliseconds: 60_000,
-          requireInstancerInstancesRunning: false,
-        },
-      }
-    ),
-  ]
-
-  const dynamic = makeChallenge(
-    DYNAMIC_CHALLENGE_ID,
-    FLAG_CHALLENGE_COUNT + KOTH_CHALLENGES.length + 2 + AD_CHALLENGES.length,
-    {
-      name: 'Dynamic Flags',
-      description: 'Per-team dynamic flags with cheat detection.',
-      category: 'misc',
-      points: { min: 100, max: 500 },
-      flags: [
+      },
+      expose: [
         {
-          provider: 'flags/dynamic',
-          config: { base: DYNAMIC_FLAG_BASE, mode: DynamicFlagMode.AUTO },
+          kind: ExposeKind.HTTP,
+          hostPrefix: 'instancer-playground-web',
+          containerName: 'app',
+          containerPort: 80,
+          shouldDisplay: true,
+          title: 'Web',
+        },
+        {
+          kind: ExposeKind.TCP,
+          hostPrefix: 'instancer-playground-nc',
+          containerName: 'app',
+          containerPort: 1337,
+          shouldDisplay: true,
+          title: 'Netcat',
         },
       ],
-    }
-  )
+      timeoutMilliseconds: 600_000,
+      extendable: true,
+    },
+  })
 
-  return [...flags, ...koths, ...ads, ...playgrounds, dynamic]
+  add(ADMIN_BOT_CHALLENGE_ID, {
+    name: 'Admin Bot Playground',
+    description:
+      'Standalone admin-bot challenge for exercising the admin-bot panel.',
+    category: 'web',
+    points: { min: 100, max: 500 },
+    flags: [
+      {
+        provider: 'flags/static',
+        config: { flag: 'rctf{admin_bot_playground}' },
+      },
+    ],
+    releaseTime: Date.now() - DAY,
+    adminBotConfig: {
+      code: ADMIN_BOT_PLAYGROUND_CODE,
+      inputs: {
+        url: { pattern: '^https?://.+', flags: 'i' },
+      },
+      revision: '1',
+      timeoutMilliseconds: 60_000,
+      requireInstancerInstancesRunning: false,
+    },
+  })
+
+  for (const [index, ad] of AD_CHALLENGES.entries()) {
+    add(ad.id, {
+      name: `Ad ${index + 1}`,
+      description: `Generated attack/defense challenge ${index + 1}${
+        ad.penalties ? ' with performance penalties' : ''
+      }.`,
+      category: 'ad',
+      scoring: {
+        kind: ChallengeScoringKind.DYNAMIC,
+        source: {
+          transport: DynamicScoringTransport.WEBHOOK,
+          secret: `${ad.id}-webhook-secret`,
+        },
+      },
+    })
+  }
+
+  add(DYNAMIC_CHALLENGE_ID, {
+    name: 'Dynamic Flags',
+    description: 'Per-team dynamic flags with cheat detection.',
+    category: 'misc',
+    points: { min: 100, max: 500 },
+    flags: [
+      {
+        provider: 'flags/dynamic',
+        config: { base: DYNAMIC_FLAG_BASE, mode: DynamicFlagMode.AUTO },
+      },
+    ],
+  })
+
+  for (const [name, id] of [
+    ['External Challenge (scores)', EXTERNAL_CHALLENGE_ID_WITH_SCORES],
+    ['External Challenge (no scores)', EXTERNAL_CHALLENGE_ID],
+  ]) {
+    add(id!, {
+      name: name!,
+      description: 'Scored by an external app over the dynamic scores webhook.',
+      category: 'external',
+      scoring: {
+        kind: ChallengeScoringKind.DYNAMIC,
+        source: {
+          transport: DynamicScoringTransport.WEBHOOK,
+          secret: EXTERNAL_APP_WEBHOOK_SECRET,
+        },
+      },
+    })
+  }
+
+  return challenges
 }
 
 const pickChallengeIndices = (weights: readonly number[], count: number) =>
@@ -874,7 +900,11 @@ export const buildSeedData = (config: ServerConfig): SeedData => {
   const dynamicFlagData = buildDynamicFlagData(timing, teams)
   submissions.push(...dynamicFlagData.submissions)
 
-  for (const dynamic of [...KOTH_CHALLENGES, ...AD_CHALLENGES]) {
+  for (const dynamic of [
+    ...KOTH_CHALLENGES,
+    ...AD_CHALLENGES,
+    { id: EXTERNAL_CHALLENGE_ID_WITH_SCORES, penalties: true },
+  ]) {
     const scores = buildKothScores(timing, teams, dynamic.id, dynamic.penalties)
     solves.push(...scores.solves)
     scoreEvents.push(...scores.scoreEvents)
@@ -890,6 +920,7 @@ export const buildSeedData = (config: ServerConfig): SeedData => {
     scoreEvents,
     submissions,
     dynamicFlags: dynamicFlagData.dynamicFlags,
+    externalAuthClient: buildExternalAuthClient(admin),
     settings: buildSettings(config, timing),
   }
 }

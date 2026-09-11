@@ -116,6 +116,7 @@ type ChallengeSolvesWithPosition = {
     bloodIndex: number | null
   }[]
   solvePosition: number | null
+  total: number
 }
 
 const createRankedSolvesForChallenges = (
@@ -184,7 +185,7 @@ export const isChallengePublic = (challenge: Challenge): boolean => {
 }
 
 const challengeDefaultOrder = [
-  sql`((${challenges.data} ->> 'sortWeight')::int) NULLS LAST`,
+  desc(sql`COALESCE((${challenges.data} ->> 'sortWeight')::int, 0)`),
   desc(challenges.id),
 ] as const
 
@@ -609,14 +610,18 @@ export const getChallengeSolvesWithPosition = async (
   challengeId: string,
   userId: string | null,
   limit: number,
-  offset: number
+  offset: number,
+  { includeHidden = false }: { includeHidden?: boolean } = {}
 ): Promise<ChallengeSolvesWithPosition> => {
-  const challenge = await getChallenge(db, challengeId)
+  const challenge = includeHidden
+    ? await getPrivateChallenge(db, challengeId)
+    : await getChallenge(db, challengeId)
   if (!challenge) {
     return {
       challengeExists: false,
       solvePosition: null,
       solves: [],
+      total: 0,
     }
   }
 
@@ -638,6 +643,7 @@ export const getChallengeSolvesWithPosition = async (
       userSolvePosition: sql<number | null>`(
         SELECT position FROM ranked WHERE challengeid = ${challengeId} AND userid = ${userId}
       )`.as('user_solve_position'),
+      total: sql<number>`count(*) over ()::int`.as('total'),
     })
     .from(ranked)
     .innerJoin(users, eq(users.id, ranked.userId))
@@ -647,16 +653,29 @@ export const getChallengeSolvesWithPosition = async (
     .offset(offset)
 
   if (rows.length === 0) {
+    const summary = await db
+      .with(ranked)
+      .select({
+        total: count(),
+        userSolvePosition: sql<number | null>`(
+          SELECT position FROM ranked WHERE challengeid = ${challengeId} AND userid = ${userId}
+        )`.as('user_solve_position'),
+      })
+      .from(ranked)
+      .where(eq(ranked.challengeId, challengeId))
+      .then(takeUnique)
     return {
       challengeExists: true,
-      solvePosition: null,
+      solvePosition: summary?.userSolvePosition ?? null,
       solves: [],
+      total: summary?.total ?? 0,
     }
   }
 
   return {
     challengeExists: true,
     solvePosition: rows[0]!.userSolvePosition,
+    total: rows[0]!.total,
     solves: rows.map(r => ({
       id: r.solveId,
       createdAt: r.createdAt,

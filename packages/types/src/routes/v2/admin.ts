@@ -11,16 +11,19 @@ import {
   BadEndpoint,
   BadExternalAuthRequest,
   BadInstancerConfig,
+  BadInstancerError,
   BadKnownEmail,
   BadKnownName,
   BadModerationNotPassed,
   BadName,
   BadPerms,
+  BadRateLimit,
   BadToken,
   BadUnknownSolveV2,
   BadUnknownUser,
   BadUnknownVerification,
   BadUserPrivileged,
+  ErrorInternal,
   GoodAdminBotChallengeSource,
   GoodAdminBotJobPull,
   GoodAdminBotJobUpdate,
@@ -28,6 +31,7 @@ import {
   GoodAdminBotStatus,
   GoodAdminChallengesV2,
   GoodAdminChallengeV2,
+  GoodChallengeSolvesV2,
   GoodAdminExternalAuthClientCreate,
   GoodAdminExternalAuthClientDelete,
   GoodAdminExternalAuthClients,
@@ -48,7 +52,9 @@ import {
   GoodFlagProviders,
   GoodCreateUserTokenV2,
   GoodFilesUploadV2,
+  GoodInstancerActionResult,
   GoodInstancerSchema,
+  GoodInstanceStatus,
   GoodUploadsQueryV2,
 } from '../../responses'
 import {
@@ -385,6 +391,112 @@ export const GetAdminChallengeRouteV2 = defineRoute({
   permissions: Permissions.challsRead,
 })
 
+export const GetAdminChallengeSolvesRouteV2 = defineRoute({
+  path: '/v2/admin/challs/:id/solves',
+  method: 'GET',
+  goodResponses: [GoodChallengeSolvesV2],
+  badResponses: [BadChallenge, BadBody, BadPerms, BadToken],
+  authRequired: true,
+  params: AdminChallengeParams,
+  query: z.object({
+    // NOTE: Has max limits that are loaded from config
+    limit: z
+      .pipe(z.coerce.number(), z.int())
+      .check(z.gte(1))
+      .check(z.describe('Integer `>= 1`. Maximum enforced by config.')),
+    offset: z
+      .pipe(z.coerce.number(), z.int())
+      .check(z.gte(0))
+      .check(z.describe('Integer `>= 0`.')),
+  }),
+  permissions: Permissions.challsRead,
+})
+
+export const GetAdminInstanceStatusRouteV2 = defineRoute({
+  path: '/v2/admin/challs/:id/instance',
+  method: 'GET',
+  goodResponses: [GoodInstanceStatus],
+  badResponses: [
+    BadInstancerError,
+    BadEndpoint,
+    BadChallenge,
+    BadPerms,
+    BadToken,
+    ErrorInternal,
+  ],
+  authRequired: true,
+  params: AdminChallengeParams,
+  permissions: Permissions.challsRead,
+})
+
+export const CreateAdminInstanceRouteV2 = defineRoute({
+  path: '/v2/admin/challs/:id/instance',
+  method: 'PUT',
+  goodResponses: [GoodInstanceStatus],
+  badResponses: [
+    BadInstancerError,
+    BadEndpoint,
+    BadChallenge,
+    BadPerms,
+    BadToken,
+  ],
+  authRequired: true,
+  params: AdminChallengeParams,
+  permissions: Permissions.challsRead,
+})
+
+export const DeleteAdminInstanceRouteV2 = defineRoute({
+  path: '/v2/admin/challs/:id/instance',
+  method: 'DELETE',
+  goodResponses: [GoodInstanceStatus],
+  badResponses: [
+    BadInstancerError,
+    BadEndpoint,
+    BadChallenge,
+    BadPerms,
+    BadToken,
+  ],
+  authRequired: true,
+  params: AdminChallengeParams,
+  permissions: Permissions.challsRead,
+})
+
+export const ExtendAdminInstanceRouteV2 = defineRoute({
+  path: '/v2/admin/challs/:id/instance',
+  method: 'PATCH',
+  goodResponses: [GoodInstanceStatus],
+  badResponses: [
+    BadInstancerError,
+    BadEndpoint,
+    BadChallenge,
+    BadPerms,
+    BadToken,
+  ],
+  authRequired: true,
+  params: AdminChallengeParams,
+  permissions: Permissions.challsRead,
+})
+
+export const RunAdminInstanceActionRouteV2 = defineRoute({
+  path: '/v2/admin/challs/:id/instance/actions/:action',
+  method: 'POST',
+  goodResponses: [GoodInstancerActionResult],
+  badResponses: [
+    BadInstancerError,
+    BadEndpoint,
+    BadChallenge,
+    BadRateLimit,
+    BadPerms,
+    BadToken,
+  ],
+  authRequired: true,
+  params: z.object({
+    id: z.string().check(z.describe('Challenge ID.')),
+    action: z.string().check(z.describe('Instancer action name.')),
+  }),
+  permissions: Permissions.challsRead,
+})
+
 export const UpdateChallengeRouteV2 = defineRoute({
   path: '/v2/admin/challs/:id',
   method: 'PUT',
@@ -421,7 +533,7 @@ export const UpdateChallengeRouteV2 = defineRoute({
           z.describe('Whether solves count toward tiebreak ordering.')
         ),
         files: z.optional(z.array(ChallengeFileSchemaV2)),
-        sortWeight: example(z.optional(z.number()), 0).check(
+        sortWeight: example(z.optional(z.int32()), 0).check(
           z.describe('Manual ordering weight.')
         ),
         tags: example(z.optional(z.array(z.string())), ['beginner']).check(
