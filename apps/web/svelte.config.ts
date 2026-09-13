@@ -36,6 +36,8 @@ const config: Config = {
               'https://*.hcaptcha.com',
               // turnstile
               'https://challenges.cloudflare.com',
+              // Cloudflare Web Analytics
+              'https://static.cloudflareinsights.com',
             ],
           },
         },
