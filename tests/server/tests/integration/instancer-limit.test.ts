@@ -10,6 +10,7 @@ import {
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import type { Hono } from 'hono'
 import {
+  recordInstanceStarted,
   teamInstancesInitializedKey,
   teamInstancesKey,
 } from '../../../../apps/api/src/cache/instance-limiter'
@@ -201,6 +202,80 @@ afterAll(async () => {
 })
 
 describe('instancer maxInstances limiter integration', () => {
+  test('removes deleted challenges at the limit and preserves active instances', async () => {
+    config.maxInstances = 2
+    const testUser = await generateRealTestUser()
+
+    try {
+      const userToken = await createToken(TokenKind.Auth, testUser.user.id)
+      const redis = await createRedis()
+      const key = teamInstancesKey(testUser.user.id)
+      const deletedChallengeId = crypto.randomUUID()
+      testProvider.seedRunning(testUser.user.id, 'chall-1-int')
+      await redis.set(teamInstancesInitializedKey(testUser.user.id), '1')
+      await recordInstanceStarted(redis, testUser.user.id, chall1Id, 60000)
+      await redis.zadd(key, Date.now() / 1000 - 60, deletedChallengeId)
+
+      const startInstance = (challengeId: string) =>
+        request(app, `/api/v2/integrations/challs/${challengeId}/instance`, {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({}),
+        })
+
+      await expectResponse(await startInstance(chall2Id), GoodInstanceStatus)
+      expect(await redis.zscore(key, deletedChallengeId)).toBeNull()
+      expect((await redis.zrange(key, '0', '-1')).sort()).toEqual(
+        [chall1Id, chall2Id].sort()
+      )
+      await expectResponse(await startInstance(chall3Id), BadTooManyInstances)
+    } finally {
+      testProvider.clearRunning(testUser.user.id, 'chall-1-int')
+      testProvider.clearRunning(testUser.user.id, 'chall-2-int')
+      config.maxInstances = undefined
+      await testUser.cleanup()
+    }
+  })
+
+  test('still fails closed on provider errors after removing deleted challenges', async () => {
+    config.maxInstances = 2
+    const testUser = await generateRealTestUser()
+
+    try {
+      const userToken = await createToken(TokenKind.Auth, testUser.user.id)
+      const redis = await createRedis()
+      const key = teamInstancesKey(testUser.user.id)
+      const deletedChallengeId = crypto.randomUUID()
+      await redis.set(teamInstancesInitializedKey(testUser.user.id), '1')
+      await recordInstanceStarted(redis, testUser.user.id, chall1Id, 60000)
+      await redis.zadd(key, Date.now() / 1000 - 60, deletedChallengeId)
+      testProvider.setGetError(testUser.user.id, 'chall-1-int', true)
+
+      const res = await request(
+        app,
+        `/api/v2/integrations/challs/${chall2Id}/instance`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({}),
+        }
+      )
+      await expectResponse(res, BadInstancerError)
+      expect(await redis.zscore(key, deletedChallengeId)).toBeNull()
+      expect(await redis.zrange(key, '0', '-1')).toEqual([chall1Id])
+    } finally {
+      testProvider.setGetError(testUser.user.id, 'chall-1-int', false)
+      config.maxInstances = undefined
+      await testUser.cleanup()
+    }
+  })
+
   test('atomically enforces the limit for concurrent starts', async () => {
     config.maxInstances = 1
     const testUser = await generateRealTestUser()

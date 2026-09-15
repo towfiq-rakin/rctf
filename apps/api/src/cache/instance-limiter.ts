@@ -209,17 +209,20 @@ const reconcileTrackedInstances = async (
   const challenges = await Promise.all(
     challengeIds
       .filter(challengeId => !reservations.has(challengeId))
-      .map(challengeId => getPrivateChallenge(db, challengeId))
+      .map(async challengeId => {
+        const challenge = await getPrivateChallenge(db, challengeId)
+        if (challenge === undefined) {
+          // Deleted challenges can leave stale slots in the team's limiter.
+          await recordInstanceStopped(redis, teamId, challengeId)
+        }
+        return challenge
+      })
   )
-
-  if (challenges.some(challenge => challenge === undefined)) {
-    return false
-  }
 
   return await reconcileChallenges(
     redis,
     teamId,
-    challenges as Challenge[],
+    challenges.filter(challenge => challenge !== undefined),
     true
   )
 }
