@@ -39,7 +39,7 @@
   const rovingFocus = createRovingFocus()
 
   // Replace this demo invite with the event's Discord server URL.
-  const discordServerUrl = 'https://discord.gg/example'
+  const discordServerUrl = 'https://discord.gg/GqNe8kVfN'
 
   const queryClient = useQueryClient()
   const configQuery = useClientConfig()
