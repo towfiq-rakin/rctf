@@ -57,6 +57,7 @@ Category names, icons, colors, aliases, and display order are configured in `app
 | `forensics` | Forensics | <color-swatch style="--c:#30a46c">green</color-swatch> | `IconFingerprint{:ts}` |
 | `blockchain` | Blockchain | <color-swatch style="--c:#12a594">teal</color-swatch> | `IconPiggyBank{:ts}` |
 | `web` | Web | <color-swatch style="--c:#7ce2fe">sky</color-swatch> | `IconCloud{:ts}` |
+| `game` | Game | <color-swatch style="--c:#30a46c">green</color-swatch> | `IconGameController{:ts}` |
 | `misc` | Miscellaneous | <color-swatch style="--c:#6e56cf">violet</color-swatch> | `IconDiceFive{:ts}` |
 | `ppc` | Professional Programming and Coding | <color-swatch style="--c:#ab4aba">plum</color-swatch> | `IconGraph{:ts}` |
 | `osint` | OSINT | <color-swatch style="--c:#8d8d8d">gray</color-swatch> | `IconEye{:ts}` |
@@ -149,6 +150,7 @@ The tokens include two backgrounds, one hover background, and two foregrounds.
       'forensics',
       'blockchain',
       'web',
+      'game',
       'misc',
       'ppc',
       'osint',
